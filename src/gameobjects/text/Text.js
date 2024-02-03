@@ -1433,7 +1433,7 @@ var Text = new Class({
         {
             this.frame.source.glTexture = this.renderer.canvasToTexture(canvas, this.frame.source.glTexture, true);
 
-            this.frame.glTexture = this.frame.source.glTexture;
+            //  this.frame.glTexture = this.frame.source.glTexture;
 
             if (typeof WEBGL_DEBUG)
             {
