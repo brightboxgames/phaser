@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -120,6 +120,16 @@ var Config = new Class({
          * @const {number} Phaser.Core.Config#maxHeight - The maximum height, in pixels, the canvas will scale up to. A value of zero means no maximum.
          */
         this.maxHeight = GetValue(scaleConfig, 'max.height', 0, config);
+
+        /**
+         * @const {number} Phaser.Core.Config#snapWidth - The horizontal amount to snap the canvas by when the Scale Manager is resizing. A value of zero means no snapping.
+         */
+        this.snapWidth = GetValue(scaleConfig, 'snap.width', 0, config);
+
+        /**
+         * @const {number} Phaser.Core.Config#snapHeight - The vertical amount to snap the canvas by when the Scale Manager is resizing. A value of zero means no snapping.
+         */
+        this.snapHeight = GetValue(scaleConfig, 'snap.height', 0, config);
 
         /**
          * @const {number} Phaser.Core.Config#renderType - Force Phaser to use a specific renderer. Can be `CONST.CANVAS`, `CONST.WEBGL`, `CONST.HEADLESS` or `CONST.AUTO` (default)

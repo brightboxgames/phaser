@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -210,6 +210,15 @@ var WebGLTextureWrapper = new Class({
      */
     createResource: function ()
     {
+        var gl = this.gl;
+        
+        if (gl.isContextLost())
+        {
+            // GL state can't be updated right now.
+            // `createResource` will run when the context is restored.
+            return;
+        }
+
         if (this.pixels instanceof WebGLTextureWrapper)
         {
             // Use the source texture directly.
@@ -217,15 +226,83 @@ var WebGLTextureWrapper = new Class({
             return;
         }
 
+        var texture = gl.createTexture();
+
+        // Set Spector metadata.
+        // eslint-disable-next-line camelcase
+        texture.__SPECTOR_Metadata = this.__SPECTOR_Metadata;
+
+        // Assign the texture to our wrapper.
+        this.webGLTexture = texture;
+
+        this._processTexture();
+    },
+
+    /**
+     * Updates the WebGLTexture from an updated source.
+     *
+     * This should only be used when the source is a Canvas or Video element.
+     *
+     * @method Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper#update
+     * @since 3.80.0
+     *
+     * @param {?object} source - The source to update the WebGLTexture with.
+     * @param {number} width - The new width of the WebGLTexture.
+     * @param {number} height - The new height of the WebGLTexture.
+     * @param {boolean} flipY - Should the WebGLTexture set `UNPACK_MULTIPLY_FLIP_Y`?
+     * @param {number} wrapS - The new wrapping mode for the WebGLTexture.
+     * @param {number} wrapT - The new wrapping mode for the WebGLTexture.
+     * @param {number} minFilter - The new minification filter for the WebGLTexture.
+     * @param {number} magFilter - The new magnification filter for the WebGLTexture.
+     * @param {number} format - The new format for the WebGLTexture.
+     */
+    update: function (source, width, height, flipY, wrapS, wrapT, minFilter, magFilter, format)
+    {
+        if (width === 0 || height === 0)
+        {
+            return;
+        }
+
+        // Assume that the source might change.
+        this.pixels = source;
+        this.width = width;
+        this.height = height;
+        this.flipY = flipY;
+        this.wrapS = wrapS;
+        this.wrapT = wrapT;
+        this.minFilter = minFilter;
+        this.magFilter = magFilter;
+        this.format = format;
+
         var gl = this.gl;
 
-        var texture = gl.createTexture();
+        if (gl.isContextLost())
+        {
+            // GL state can't be updated right now.
+            // `createResource` will run when the context is restored.
+            return;
+        }
+
+        this._processTexture();
+    },
+
+    /**
+     * Set all parameters of this WebGLTexture per the stored values.
+     *
+     * @function Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper#_processTexture
+     * @protected
+     * @since 3.90.0
+     * @ignore
+     */
+    _processTexture: function ()
+    {
+        var gl = this.gl;
 
         gl.activeTexture(gl.TEXTURE0);
 
         var currentTexture = gl.getParameter(gl.TEXTURE_BINDING_2D);
 
-        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.bindTexture(gl.TEXTURE_2D, this.webGLTexture);
 
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.minFilter);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.magFilter);
@@ -233,11 +310,7 @@ var WebGLTextureWrapper = new Class({
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, this.wrapT);
 
         gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this.pma);
-
-        if (this.flipY)
-        {
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        }
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, this.flipY);
 
         var pixels = this.pixels;
         var mipLevel = this.mipLevel;
@@ -267,6 +340,8 @@ var WebGLTextureWrapper = new Class({
         else if (pixels instanceof Uint8Array)
         {
             gl.texImage2D(gl.TEXTURE_2D, mipLevel, format, width, height, 0, format, gl.UNSIGNED_BYTE, pixels);
+
+            generateMipmap = IsSizePowerOfTwo(width, height);
         }
         else
         {
@@ -286,63 +361,14 @@ var WebGLTextureWrapper = new Class({
             gl.generateMipmap(gl.TEXTURE_2D);
         }
 
-        // Set Spector metadata.
-        // eslint-disable-next-line camelcase
-        texture.__SPECTOR_Metadata = this.__SPECTOR_Metadata;
-
         // Restore previous texture bind.
         if (currentTexture)
         {
             gl.bindTexture(gl.TEXTURE_2D, currentTexture);
         }
-
-        // Assign the texture to our wrapper.
-        this.webGLTexture = texture;
-    },
-
-    /**
-     * Updates the WebGLTexture from an updated source.
-     *
-     * This should only be used when the source is a Canvas or Video element.
-     *
-     * @method Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper#update
-     * @since 3.80.0
-     *
-     * @param {HTMLCanvasElement|HTMLVideoElement} source - The source to update the WebGLTexture with.
-     * @param {number} width - The new width of the WebGLTexture.
-     * @param {number} height - The new height of the WebGLTexture.
-     * @param {boolean} [flipY] - Should the WebGLTexture set `UNPACK_MULTIPLY_FLIP_Y`?
-     */
-    update: function (source, width, height, flipY)
-    {
-        if (width === 0 || height === 0)
+        else
         {
-            return;
-        }
-
-        var gl = this.gl;
-
-        gl.activeTexture(gl.TEXTURE0);
-
-        var currentTexture = gl.getParameter(gl.TEXTURE_BINDING_2D);
-
-        gl.bindTexture(gl.TEXTURE_2D, this.webGLTexture);
-
-        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, flipY);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, this.pma);
-
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-
-        // Assume that the source might change.
-        this.pixels = source;
-        this.width = width;
-        this.height = height;
-        this.flipY = flipY;
-
-        // Restore previous texture bind.
-        if (currentTexture)
-        {
-            gl.bindTexture(gl.TEXTURE_2D, currentTexture);
+            gl.bindTexture(gl.TEXTURE_2D, null);
         }
     },
 
@@ -365,8 +391,12 @@ var WebGLTextureWrapper = new Class({
         {
             // eslint-disable-next-line camelcase
             this.__SPECTOR_Metadata = value;
-            // eslint-disable-next-line camelcase
-            this.webGLTexture.__SPECTOR_Metadata = value;
+
+            if (!this.gl.isContextLost())
+            {
+                // eslint-disable-next-line camelcase
+                this.webGLTexture.__SPECTOR_Metadata = value;
+            }
         }
     },
 
@@ -383,10 +413,13 @@ var WebGLTextureWrapper = new Class({
             return;
         }
 
-        if (!(this.pixels instanceof WebGLTextureWrapper))
+        if (!this.gl.isContextLost())
         {
-            // Do not delete a texture that belongs to another wrapper.
-            this.gl.deleteTexture(this.webGLTexture);
+            if (!(this.pixels instanceof WebGLTextureWrapper))
+            {
+                // Do not delete a texture that belongs to another wrapper.
+                this.gl.deleteTexture(this.webGLTexture);
+            }
         }
 
         this.pixels = null;

@@ -1,3 +1,9 @@
+/**
+ * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
+ * @copyright    2013-2024 Phaser Studio Inc.
+ * @license      {@link https://opensource.org/licenses/MIT|MIT License}
+ */
+
 var Class = require('../../../utils/Class');
 
 /**
@@ -81,7 +87,16 @@ var WebGLUniformLocationWrapper = new Class({
             return;
         }
 
-        this.webGLUniformLocation = this.gl.getUniformLocation(this.program.webGLProgram, this.name);
+        var gl = this.gl;
+
+        if (gl.isContextLost())
+        {
+            // GL state can't be updated right now.
+            // `createResource` will run when the context is restored.
+            return;
+        }
+
+        this.webGLUniformLocation = gl.getUniformLocation(this.program.webGLProgram, this.name);
     },
 
     /**

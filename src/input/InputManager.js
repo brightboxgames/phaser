@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -176,11 +176,6 @@ var InputManager = new Class({
          * @since 3.10.0
          */
         this.pointersTotal = config.inputActivePointers;
-
-        if (config.inputTouch && this.pointersTotal === 1)
-        {
-            this.pointersTotal = 2;
-        }
 
         for (var i = 0; i <= this.pointersTotal; i++)
         {
@@ -570,7 +565,7 @@ var InputManager = new Class({
         {
             var changedTouch = event.changedTouches[c];
 
-            for (var i = 1; i < this.pointersTotal; i++)
+            for (var i = 1; i < pointers.length; i++)
             {
                 var pointer = pointers[i];
 
@@ -608,7 +603,7 @@ var InputManager = new Class({
         {
             var changedTouch = event.changedTouches[c];
 
-            for (var i = 1; i < this.pointersTotal; i++)
+            for (var i = 1; i < pointers.length; i++)
             {
                 var pointer = pointers[i];
 
@@ -665,7 +660,7 @@ var InputManager = new Class({
         {
             var changedTouch = event.changedTouches[c];
 
-            for (var i = 1; i < this.pointersTotal; i++)
+            for (var i = 1; i < pointers.length; i++)
             {
                 var pointer = pointers[i];
 
@@ -701,7 +696,7 @@ var InputManager = new Class({
         {
             var changedTouch = event.changedTouches[c];
 
-            for (var i = 1; i < this.pointersTotal; i++)
+            for (var i = 1; i < pointers.length; i++)
             {
                 var pointer = pointers[i];
 

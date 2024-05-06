@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -13,6 +13,7 @@ var SetValue = require('../../utils/object/SetValue');
 var ShaderRender = require('./ShaderRender');
 var TransformMatrix = require('../components/TransformMatrix');
 var ArrayEach = require('../../utils/array/Each');
+var RenderEvents = require('../../renderer/events');
 
 /**
  * @classdesc
@@ -165,6 +166,28 @@ var Shader = new Class({
          * @since 3.17.0
          */
         this.vertexBuffer = renderer.createVertexBuffer(this.vertexData.byteLength, this.gl.STREAM_DRAW);
+
+        /**
+         * Internal property: whether the shader needs to be created,
+         * and if so, the key and textures to use for the shader.
+         *
+         * @name Phaser.GameObjects.Shader#_deferSetShader
+         * @type {?{ key: string, textures: string[]|undefined, textureData: any|undefined }}
+         * @private
+         * @since 3.80.0
+         */
+        this._deferSetShader = null;
+
+        /**
+         * Internal property: whether the projection matrix needs to be set,
+         * and if so, the data to use for the orthographic projection.
+         *
+         * @name Phaser.GameObjects.Shader#_deferProjOrtho
+         * @type {?{ left: number, right: number, bottom: number, top: number }}
+         * @private
+         * @since 3.80.0
+         */
+        this._deferProjOrtho = null;
 
         /**
          * The WebGL shader program this shader uses.
@@ -339,7 +362,7 @@ var Shader = new Class({
         /**
          * A reference to the Phaser.Textures.Texture that has been stored in the Texture Manager for this Shader.
          *
-         * This property is only set if you have called `Shader.setRenderToTexture`, otherwise it is `null`.
+         * This property is only set if you have called `Shader.setRenderToTexture` with a key, otherwise it is `null`.
          *
          * @name Phaser.GameObjects.Shader#texture
          * @type {Phaser.Textures.Texture}
@@ -351,6 +374,8 @@ var Shader = new Class({
         this.setSize(width, height);
         this.setOrigin(0.5, 0.5);
         this.setShader(key, textures, textureData);
+
+        this.renderer.on(RenderEvents.RESTORE_WEBGL, this.onContextRestored, this);
     },
 
     /**
@@ -427,8 +452,6 @@ var Shader = new Class({
 
             this.glTexture = renderer.createTextureFromSource(null, width, height, 0);
 
-            this.glTexture.flipY = flipY;
-
             this.framebuffer = renderer.createFramebuffer(width, height, this.glTexture, false);
 
             this._rendererWidth = width;
@@ -475,6 +498,12 @@ var Shader = new Class({
      */
     setShader: function (key, textures, textureData)
     {
+        if (this.renderer.contextLost)
+        {
+            this._deferSetShader = { key: key, textures: textures, textureData: textureData };
+            return this;
+        }
+
         if (textures === undefined) { textures = []; }
 
         if (typeof key === 'string')
@@ -585,6 +614,12 @@ var Shader = new Class({
      */
     projOrtho: function (left, right, bottom, top)
     {
+        if (this.renderer.contextLost)
+        {
+            this._deferProjOrtho = { left: left, right: right, bottom: bottom, top: top };
+            return;
+        }
+
         var near = -1000;
         var far = 1000;
 
@@ -905,17 +940,13 @@ var Shader = new Class({
             return;
         }
 
-        var gl = this.gl;
-
-        gl.activeTexture(gl.TEXTURE0 + this._textureCount);
-        gl.bindTexture(gl.TEXTURE_2D, uniform.value.webGLTexture);
-
         //  Extended texture data
 
         var data = uniform.textureData;
 
         if (data && !uniform.value.isRenderTexture)
         {
+            var gl = this.gl;
             var wrapper = uniform.value;
             
             // https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/texImage2D
@@ -929,6 +960,10 @@ var Shader = new Class({
             var wrapS = gl[GetFastValue(data, 'wrapS', 'repeat').toUpperCase()];
             var wrapT = gl[GetFastValue(data, 'wrapT', 'repeat').toUpperCase()];
             var format = gl[GetFastValue(data, 'format', 'rgba').toUpperCase()];
+            var flipY = GetFastValue(data, 'flipY', false);
+            var width = GetFastValue(data, 'width', wrapper.width);
+            var height = GetFastValue(data, 'height', wrapper.height);
+            var source = GetFastValue(data, 'source', wrapper.pixels);
 
             if (data.repeat)
             {
@@ -936,38 +971,13 @@ var Shader = new Class({
                 wrapT = gl.REPEAT;
             }
 
-            gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, !!data.flipY);
-
             if (data.width)
             {
-                var width = GetFastValue(data, 'width', 512);
-                var height = GetFastValue(data, 'height', 2);
-                var border = GetFastValue(data, 'border', 0);
-
-                //  texImage2D(GLenum target, GLint level, GLenum internalformat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, ArrayBufferView? pixels)
-                gl.texImage2D(gl.TEXTURE_2D, 0, format, width, height, border, format, gl.UNSIGNED_BYTE, null);
-                wrapper.width = width;
-                wrapper.height = height;
-            }
-            else
-            {
-                //  texImage2D(GLenum target, GLint level, GLenum internalformat, GLenum format, GLenum type, ImageData? pixels)
-                gl.texImage2D(gl.TEXTURE_2D, 0, format, gl.RGBA, gl.UNSIGNED_BYTE, uniform.source);
+                // If the uniform has resolution, use a blank texture.
+                source = null;
             }
 
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, magFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, minFilter);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrapS);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrapT);
-
-            // Update texture wrapper.
-            wrapper.magFilter = magFilter;
-            wrapper.minFilter = minFilter;
-            wrapper.wrapS = wrapS;
-            wrapper.wrapT = wrapT;
-            wrapper.format = format;
-            wrapper.flipY = !!data.flipY;
-            wrapper.pixels = uniform.source;
+            wrapper.update(source, width, height, flipY, wrapS, wrapT, minFilter, magFilter, format);
         }
 
         this.renderer.setProgram(this.program);
@@ -1208,6 +1218,34 @@ var Shader = new Class({
     },
 
     /**
+     * Run any logic that was deferred during context loss.
+     * 
+     * @method Phaser.GameObjects.Shader#onContextRestored
+     * @since 3.80.0
+     */
+    onContextRestored: function ()
+    {
+        if (this._deferSetShader !== null)
+        {
+            var key = this._deferSetShader.key;
+            var textures = this._deferSetShader.textures;
+            var textureData = this._deferSetShader.textureData;
+            this._deferSetShader = null;
+            this.setShader(key, textures, textureData);
+        }
+
+        if (this._deferProjOrtho !== null)
+        {
+            var left = this._deferProjOrtho.left;
+            var right = this._deferProjOrtho.right;
+            var bottom = this._deferProjOrtho.bottom;
+            var top = this._deferProjOrtho.top;
+            this._deferProjOrtho = null;
+            this.projOrtho(left, right, bottom, top);
+        }
+    },
+
+    /**
      * Internal destroy handler, called as part of the destroy process.
      *
      * @method Phaser.GameObjects.Shader#preDestroy
@@ -1218,6 +1256,7 @@ var Shader = new Class({
     {
         var renderer = this.renderer;
 
+        renderer.off(RenderEvents.RESTORE_WEBGL, this.onContextRestored, this);
         renderer.deleteProgram(this.program);
         renderer.deleteBuffer(this.vertexBuffer);
 

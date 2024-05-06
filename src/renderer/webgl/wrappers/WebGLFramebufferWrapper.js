@@ -1,3 +1,9 @@
+/**
+ * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
+ * @copyright    2013-2024 Phaser Studio Inc.
+ * @license      {@link https://opensource.org/licenses/MIT|MIT License}
+ */
+
 var Class = require('../../../utils/Class');
 
 /**
@@ -113,6 +119,14 @@ var WebGLFramebufferWrapper = new Class({
     createResource: function ()
     {
         var gl = this.gl;
+
+        if (gl.isContextLost())
+        {
+            // GL state can't be updated right now.
+            // `createResource` will run when the context is restored.
+            return;
+        }
+
         var renderTexture = this.renderTexture;
         var complete = 0;
         var framebuffer = gl.createFramebuffer();
@@ -159,32 +173,34 @@ var WebGLFramebufferWrapper = new Class({
 
         var gl = this.gl;
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, this.webGLFramebuffer);
+        if (!gl.isContextLost())
+        {
+            gl.bindFramebuffer(gl.FRAMEBUFFER, this.webGLFramebuffer);
+
+            // Check for a color attachment and remove it
+            var colorAttachment = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+
+            if (colorAttachment !== null)
+            {
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+
+                gl.deleteTexture(colorAttachment);
+            }
+
+            // Check for a depth-stencil attachment and remove it
+            var depthStencilAttachment = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
+
+            if (depthStencilAttachment !== null)
+            {
+                gl.deleteRenderbuffer(depthStencilAttachment);
+            }
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+            gl.deleteFramebuffer(this.webGLFramebuffer);
+        }
 
         this.renderTexture = null;
-
-        // Check for a color attachment and remove it
-        var colorAttachment = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
-
-        if (colorAttachment !== null)
-        {
-            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
-
-            gl.deleteTexture(colorAttachment);
-        }
-
-        // Check for a depth-stencil attachment and remove it
-        var depthStencilAttachment = gl.getFramebufferAttachmentParameter(gl.FRAMEBUFFER, gl.DEPTH_STENCIL_ATTACHMENT, gl.FRAMEBUFFER_ATTACHMENT_OBJECT_NAME);
-
-        if (depthStencilAttachment !== null)
-        {
-            gl.deleteRenderbuffer(depthStencilAttachment);
-        }
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-        gl.deleteFramebuffer(this.webGLFramebuffer);
-
         this.webGLFramebuffer = null;
         this.gl = null;
     }

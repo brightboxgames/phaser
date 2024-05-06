@@ -35,6 +35,8 @@ A render texture which is redrawn every frame will naturally redraw itself.
 
 Textures which are drawn once, however, will stay blank. You should listen for the `RESTORE_WEBGL` event to know when to redraw them.
 
+It is safe to draw while the context is lost, but nothing will be drawn. Snapshots will return blank.
+
 ### WebGL Object Wrappers
 
 WebGL objects are now wrapped. The wrapper holds the necessary information to automatically recreate the object when context is restored.
@@ -131,6 +133,7 @@ Several changes were made to the rendering system to support these improvements.
   - Added property `glFramebufferWrappers` of type `WebGLFramebufferWrapper[]`
   - Added property `glAttribLocationWrappers` of type `WebGLAttribLocationWrapper[]`
   - Added property `glUniformLocationWrappers` of type `WebGLUniformLocationWrapper[]`
+  - Added property `normalTexture` of type `WebGLTextureWrapper`
   - `currentFramebuffer` property type changed from `WebGLFramebuffer` to `WebGLFramebufferWrapper`
   - `fboStack` property type changed from `WebGLFramebuffer[]` to `WebGLFramebufferWrapper[]`
   - `currentProgram` property type changed from `WebGLProgram` to `WebGLProgramWrapper`
@@ -195,6 +198,18 @@ Several changes were made to the rendering system to support these improvements.
 - `Phaser.Renderers.WebGL.WebGLShader`
   - `program` property type changed from `WebGLProgram` to `WebGLProgramWrapper`
   - Added method `syncUniforms` for use during context recovery
+- `Phaser.Renderers.WebGL.Pipelines.LightPipeline`
+  - Removed property `defaultNormalMap`. There is now a default normal map at `WebGLRenderer.normalTexture`, or the texture key `'__NORMAL'`.
+  - `currentNormalMap` property type changed from `WebGLTexture` to `WebGLTextureWrapper`
+  - `#setTexture2D` method:
+    - `texture` parameter type changed from `WebGLTexture` to `WebGLTextureWrapper`
+  - `#isNewNormalMap` method:
+    - `texture` parameter type changed from `WebGLTexture` to `WebGLTextureWrapper`
+    - `normalMap` parameter type changed from `WebGLTexture` to `WebGLTextureWrapper`
+  - `#getNormalMap` method:
+    - Return type changed from `WebGLTexture` to `WebGLTextureWrapper`
+  - `#batchTexture` method:
+    - `texture` parameter type changed from `WebGLTexture` to `WebGLTextureWrapper`
 - `Phaser.Renderers.WebGL.Pipelines.MultiPipeline`
   - `#batchTexture` method:
     - `texture` parameter type changed from `WebGLTexture` to `WebGLTextureWrapper`
@@ -220,10 +235,12 @@ Several changes were made to the rendering system to support these improvements.
   - Constructor
     - `source` parameter type options added `WebGLTextureWrapper`
 - `Phaser.Textures.TextureManager`
+  - A texture with the key `'__NORMAL'` is created on boot if the WebGL renderer is being used. This is a 1x1 texture of colour #7f7fff, or a flat normal map.
   - `#addGLTexture` method:
     - `glTexture` parameter type changed from `WebGLTexture` to `WebGLTextureWrapper`
     - `width` parameter removed
     - `height` parameter removed
+  - `#getTextureKeys` now excludes `'__NORMAL'` as well as `'__DEFAULT'`, `'__MISSING'`, and `'__WHITE'`.
   - Added method `addUint8Array` for creating textures from raw colour data
 - `Phaser.Textures.TextureSource`
   - `glTexture` property type changed from `WebGLTexture` to `WebGLTextureWrapper`

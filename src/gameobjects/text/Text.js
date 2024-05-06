@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -1432,8 +1432,6 @@ var Text = new Class({
         if (this.renderer && this.renderer.gl)
         {
             this.frame.source.glTexture = this.renderer.canvasToTexture(canvas, this.frame.source.glTexture, true);
-
-            //  this.frame.glTexture = this.frame.source.glTexture;
 
             if (typeof WEBGL_DEBUG)
             {

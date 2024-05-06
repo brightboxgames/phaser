@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -573,9 +573,8 @@ var InputPlugin = new Class({
         var manager = this.manager;
 
         var pointers = manager.pointers;
-        var pointersTotal = manager.pointersTotal;
 
-        for (i = 0; i < pointersTotal; i++)
+        for (i = 0; i < pointers.length; i++)
         {
             pointers[i].updateMotion();
         }
@@ -611,7 +610,7 @@ var InputPlugin = new Class({
         //  We got this far? Then we should poll for movement
         var captured = false;
 
-        for (i = 0; i < pointersTotal; i++)
+        for (i = 0; i < pointers.length; i++)
         {
             var total = 0;
 
@@ -678,10 +677,9 @@ var InputPlugin = new Class({
             return false;
         }
 
-        var pointersTotal = pointers.length;
         var captured = false;
 
-        for (var i = 0; i < pointersTotal; i++)
+        for (var i = 0; i < pointers.length; i++)
         {
             var total = 0;
             var pointer = pointers[i];
@@ -784,6 +782,7 @@ var InputPlugin = new Class({
         if (input)
         {
             this.removeDebug(gameObject);
+            this.manager.resetCursor(input);
 
             input.gameObject = undefined;
             input.target = undefined;
@@ -837,7 +836,7 @@ var InputPlugin = new Class({
         var over = this._over;
         var manager = this.manager;
 
-        for (var i = 0, index; i < manager.pointersTotal; i++)
+        for (var i = 0, index; i < manager.pointers.length; i++)
         {
             index = drag[i].indexOf(gameObject);
 
@@ -851,8 +850,6 @@ var InputPlugin = new Class({
             if (index > -1)
             {
                 over[i].splice(index, 1);
-
-                manager.resetCursor(input);
             }
         }
 
@@ -2130,12 +2127,14 @@ var InputPlugin = new Class({
      * The hit area callback is the function that takes an `x` and `y` coordinate and returns a boolean if
      * those values fall within the area of the shape or not. All of the Phaser geometry objects provide this,
      * such as `Phaser.Geom.Rectangle.Contains`.
+     * 
+     * A hit area callback can be supplied to the `hitArea` parameter without using the `hitAreaCallback` parameter.
      *
      * @method Phaser.Input.InputPlugin#setHitArea
      * @since 3.0.0
      *
      * @param {(Phaser.GameObjects.GameObject|Phaser.GameObjects.GameObject[])} gameObjects - An array of Game Objects to set the hit area on.
-     * @param {(Phaser.Types.Input.InputConfiguration|any)} [hitArea] - Either an input configuration object, or a geometric shape that defines the hit area for the Game Object. If not specified a Rectangle will be used.
+     * @param {(Phaser.Types.Input.InputConfiguration|Phaser.Types.Input.HitAreaCallback|any)} [hitArea] - Either an input configuration object, a geometric shape that defines the hit area or a hit area callback. If not specified a Rectangle hit area will be used.
      * @param {Phaser.Types.Input.HitAreaCallback} [hitAreaCallback] - The 'contains' function to invoke to check if the pointer is within the hit area.
      *
      * @return {this} This InputPlugin object.
@@ -2160,25 +2159,35 @@ var InputPlugin = new Class({
         var customHitArea = true;
 
         //  Config object?
-        if (IsPlainObject(hitArea))
+        if (IsPlainObject(hitArea) && Object.keys(hitArea).length)
         {
             var config = hitArea;
 
-            hitArea = GetFastValue(config, 'hitArea', null);
-            hitAreaCallback = GetFastValue(config, 'hitAreaCallback', null);
+            // Check if any supplied Game Object is a Mesh based Game Object
+            var isMesh = gameObjects.some(function (gameObject)
+            {
+                return gameObject.hasOwnProperty('faces');
+            });
+
+            if (!isMesh)
+            {
+                hitArea = GetFastValue(config, 'hitArea', null);
+                hitAreaCallback = GetFastValue(config, 'hitAreaCallback', null);
+
+                pixelPerfect = GetFastValue(config, 'pixelPerfect', false);
+                var alphaTolerance = GetFastValue(config, 'alphaTolerance', 1);
+
+                if (pixelPerfect)
+                {
+                    hitArea = {};
+                    hitAreaCallback = this.makePixelPerfect(alphaTolerance);
+                }
+            }
+
             draggable = GetFastValue(config, 'draggable', false);
             dropZone = GetFastValue(config, 'dropZone', false);
             cursor = GetFastValue(config, 'cursor', false);
             useHandCursor = GetFastValue(config, 'useHandCursor', false);
-
-            pixelPerfect = GetFastValue(config, 'pixelPerfect', false);
-            var alphaTolerance = GetFastValue(config, 'alphaTolerance', 1);
-
-            if (pixelPerfect)
-            {
-                hitArea = {};
-                hitAreaCallback = this.makePixelPerfect(alphaTolerance);
-            }
 
             //  Still no hitArea or callback?
             if (!hitArea || !hitAreaCallback)

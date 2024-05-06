@@ -1,7 +1,7 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
+ * @author       Richard Davey <rich@phaser.io>
  * @author       Felipe Alfonso <@bitnenfer>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -148,6 +148,7 @@ var MultiPipeline = new Class({
                 normalized: true
             }
         ]);
+        config.resizeUniform = 'uResolution';
 
         WebGLPipeline.call(this, config);
 
@@ -360,9 +361,7 @@ var MultiPipeline = new Class({
             flipX = -1;
         }
 
-        //  Auto-invert the flipY if this is coming from a GLTexture
-
-        if (gameObject.flipY || (frame.source.isGLTexture && !texture.flipY))
+        if (gameObject.flipY)
         {
             if (!customPivot)
             {

@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -187,6 +187,10 @@ var TextureManager = new Class({
         this.addBase64('__DEFAULT', config.defaultImage);
         this.addBase64('__MISSING', config.missingImage);
         this.addBase64('__WHITE', config.whiteImage);
+        if (this.game.renderer && this.game.renderer.gl)
+        {
+            this.addUint8Array('__NORMAL', new Uint8Array([ 127, 127, 255, 255 ]), 1, 1);
+        }
 
         this.game.events.once(GameEvents.DESTROY, this.destroy, this);
 
@@ -534,16 +538,27 @@ var TextureManager = new Class({
 
             if (atlasData)
             {
+                var parse = function (texture, sourceIndex, atlasData)
+                {
+                    if (Array.isArray(atlasData.textures) || Array.isArray(atlasData.frames))
+                    {
+                        Parser.JSONArray(texture, sourceIndex, atlasData);
+                    }
+                    else
+                    {
+                        Parser.JSONHash(texture, sourceIndex, atlasData);
+                    }
+                };
                 if (Array.isArray(atlasData))
                 {
                     for (var i = 0; i < atlasData.length; i++)
                     {
-                        Parser.JSONHash(texture, i, atlasData[i]);
+                        parse(texture, i, atlasData[i]);
                     }
                 }
                 else
                 {
-                    Parser.JSONHash(texture, 0, atlasData);
+                    parse(texture, 0, atlasData);
                 }
             }
 
@@ -1125,7 +1140,12 @@ var TextureManager = new Class({
 
         if (sheet)
         {
-            var texture = this.create(key, sheet.source.image);
+            var source = sheet.source.image;
+            if (!source)
+            {
+                source = sheet.source.glTexture;
+            }
+            var texture = this.create(key, source);
 
             if (sheet.trimmed)
             {
@@ -1351,7 +1371,7 @@ var TextureManager = new Class({
 
     /**
      * Returns an array with all of the keys of all Textures in this Texture Manager.
-     * The output array will exclude the `__DEFAULT`, `__MISSING`, and `__WHITE` keys.
+     * The output array will exclude the `__DEFAULT`, `__MISSING`, `__WHITE`, and `__NORMAL` keys.
      *
      * @method Phaser.Textures.TextureManager#getTextureKeys
      * @since 3.0.0
@@ -1364,7 +1384,7 @@ var TextureManager = new Class({
 
         for (var key in this.list)
         {
-            if (key !== '__DEFAULT' && key !== '__MISSING' && key !== '__WHITE')
+            if (key !== '__DEFAULT' && key !== '__MISSING' && key !== '__WHITE' && key !== '__NORMAL')
             {
                 output.push(key);
             }

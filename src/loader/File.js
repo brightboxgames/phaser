@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -240,7 +240,7 @@ var File = new Class({
          * @type {boolean}
          * @since 3.80.0
          */
-        this.base64 = (url.indexOf('data:') === 0);
+        this.base64 = (typeof url === 'string') && (url.indexOf('data:') === 0);
     },
 
     /**
@@ -294,6 +294,11 @@ var File = new Class({
             this.state = CONST.FILE_LOADING;
 
             this.src = GetURL(this, this.loader.baseURL);
+
+            if (!this.src)
+            {
+                throw new Error('URL Error in File: ' + this.key + ' from: ' + this.url);
+            }
 
             if (this.src.indexOf('data:') === 0)
             {

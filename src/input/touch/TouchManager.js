@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -301,11 +301,6 @@ var TouchManager = new Class({
             {
                 //  Only process the event if the target isn't the canvas
                 manager.onTouchEnd(event);
-
-                if (_this.capture && event.cancelable)
-                {
-                    event.preventDefault();
-                }
             }
         };
 

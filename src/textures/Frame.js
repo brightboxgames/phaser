@@ -1,6 +1,6 @@
 /**
- * @author       Richard Davey <rich@photonstorm.com>
- * @copyright    2013-2023 Photon Storm Ltd.
+ * @author       Richard Davey <rich@phaser.io>
+ * @copyright    2013-2024 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -485,6 +485,8 @@ var Frame = new Class({
      * Takes a crop data object and, based on the rectangular region given, calculates the
      * required UV coordinates in order to crop this Frame for WebGL and Canvas rendering.
      *
+     * The crop size as well as coordinates can not exceed the the size of the frame.
+     * 
      * This is called directly by the Game Object Texture Components `setCrop` method.
      * Please use that method to crop a Game Object.
      *

@@ -1,3 +1,9 @@
+/**
+ * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
+ * @copyright    2013-2024 Phaser Studio Inc.
+ * @license      {@link https://opensource.org/licenses/MIT|MIT License}
+ */
+
 var Class = require('../../../utils/Class');
 
 /**
@@ -31,7 +37,7 @@ var WebGLAttribLocationWrapper = new Class({
          * It should only be passed directly to the WebGL API for drawing.
          *
          * @name Phaser.Renderer.WebGL.Wrappers.WebGLAttribLocationWrapper#webGLAttribLocation
-         * @type {WebGLAttribLocation}
+         * @type {GLint}
          * @default -1
          * @since 3.80.0
          */
@@ -81,7 +87,16 @@ var WebGLAttribLocationWrapper = new Class({
             return;
         }
 
-        this.webGLAttribLocation = this.gl.getAttribLocation(this.program.webGLProgram, this.name);
+        var gl = this.gl;
+
+        if (gl.isContextLost())
+        {
+            // GL state can't be updated right now.
+            // `createResource` will run when the context is restored.
+            return;
+        }
+
+        this.webGLAttribLocation = gl.getAttribLocation(this.program.webGLProgram, this.name);
     },
 
     /**

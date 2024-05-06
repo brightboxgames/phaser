@@ -1,3 +1,9 @@
+/**
+ * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
+ * @copyright    2013-2024 Phaser Studio Inc.
+ * @license      {@link https://opensource.org/licenses/MIT|MIT License}
+ */
+
 var Class = require('../../../utils/Class');
 
 /**
@@ -97,6 +103,14 @@ var WebGLBufferWrapper = new Class({
         }
 
         var gl = this.gl;
+
+        if (gl.isContextLost())
+        {
+            // GL state can't be updated right now.
+            // `createResource` will run when the context is restored.
+            return;
+        }
+
         var bufferType = this.bufferType;
         var webGLBuffer = gl.createBuffer();
 
@@ -115,7 +129,11 @@ var WebGLBufferWrapper = new Class({
      */
     destroy: function ()
     {
-        this.gl.deleteBuffer(this.webGLBuffer);
+        var gl = this.gl;
+        if (!gl.isContextLost())
+        {
+            gl.deleteBuffer(this.webGLBuffer);
+        }
         this.webGLBuffer = null;
         this.initialDataOrSize = null;
         this.gl = null;
