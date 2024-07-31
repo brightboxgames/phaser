@@ -12,5 +12,7 @@
  * @event Phaser.Core.Events#RESUME
  * @type {string}
  * @since 3.0.0
+ *
+ * @param {number} pauseDuration - The duration, in ms, that the game was paused for, or 0 if {@link Phaser.Game#resume} was called.
  */
 module.exports = 'resume';

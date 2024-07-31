@@ -1348,7 +1348,7 @@ var Matrix4 = new Class({
 
         _z.subVectors(eye, target);
 
-        if (_z.getLengthSquared() === 0)
+        if (_z.lengthSq() === 0)
         {
             // eye and target are in the same position
             _z.z = 1;
@@ -1357,7 +1357,7 @@ var Matrix4 = new Class({
         _z.normalize();
         _x.crossVectors(up, _z);
 
-        if (_x.getLengthSquared() === 0)
+        if (_x.lengthSq() === 0)
         {
             // up and z are parallel
 

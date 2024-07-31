@@ -377,7 +377,7 @@ var TextStyle = new Class({
      *
      * @param {Phaser.Types.GameObjects.Text.TextStyle} style - The style settings to set.
      * @param {boolean} [updateText=true] - Whether to update the text immediately.
-     * @param {boolean} [setDefaults=false] - Use the default values is not set, or the local values.
+     * @param {boolean} [setDefaults=false] - Use the default values if not set, or the local values.
      *
      * @return {Phaser.GameObjects.Text} The parent Text object.
      */
@@ -385,13 +385,6 @@ var TextStyle = new Class({
     {
         if (updateText === undefined) { updateText = true; }
         if (setDefaults === undefined) { setDefaults = false; }
-
-        //  Avoid type mutation
-        // eslint-disable-next-line no-prototype-builtins
-        if (style && style.hasOwnProperty('fontSize') && typeof style.fontSize === 'number')
-        {
-            style.fontSize = style.fontSize.toString() + 'px';
-        }
 
         for (var key in propertyMap)
         {
@@ -401,6 +394,10 @@ var TextStyle = new Class({
             {
                 // Callback & scope should be set without processing the values
                 this[key] = GetValue(style, propertyMap[key][0], value);
+            }
+            else if (style && key === 'fontSize' && typeof style.fontSize === 'number')
+            {
+                this[key] = style.fontSize.toString() + 'px';
             }
             else
             {

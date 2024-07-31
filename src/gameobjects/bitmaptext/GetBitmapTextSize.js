@@ -213,6 +213,12 @@ var GetBitmapTextSize = function (src, round, updateOrigin, out)
             var left = entry.x;
             var right = entry.x + entry.w;
 
+            if (left === 0)
+            {
+                offset = 0;
+                prev = null;
+            }
+
             if (prev)
             {
                 var diff = left - (prev.x + prev.w);
@@ -257,10 +263,12 @@ var GetBitmapTextSize = function (src, round, updateOrigin, out)
 
         for (i = crs.length - 1; i >= 0; i--)
         {
-            // eslint-disable-next-line quotes
-            text = stringInsert(text, crs[i], "\n");
+            if (crs[i] > -1)
+            {
+                text = stringInsert(text, crs[i], "\n");
+            }
         }
-
+        
         out.wrappedText = text;
 
         textLength = text.length;
@@ -292,8 +300,6 @@ var GetBitmapTextSize = function (src, round, updateOrigin, out)
                 current = null;
             }
 
-            xAdvance = 0;
-            yAdvance = (lineHeight + lineSpacing) * currentLine;
             lastGlyph = null;
 
             lineWidths[currentLine] = currentLineWidth;
@@ -310,6 +316,9 @@ var GetBitmapTextSize = function (src, round, updateOrigin, out)
 
             currentLine++;
             currentLineWidth = 0;
+
+            xAdvance = 0;
+            yAdvance = (lineHeight + lineSpacing) * currentLine;
 
             continue;
         }
