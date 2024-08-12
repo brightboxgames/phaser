@@ -312,7 +312,7 @@ var Config = new Class({
         //  If you do: { banner: false } it won't display any banner at all
 
         /**
-         * @const {boolean} Phaser.Core.Config#hideBanner - Don't write the banner line to the console.log.
+         * @const {boolean} Phaser.Core.Config#hideBanner - Don't write the banner line to the console.log. See `Phaser.TYpes.Core.BannerConfig` for details of this object.
          */
         this.hideBanner = (GetValue(config, 'banner', null) === false);
 
@@ -529,6 +529,11 @@ var Config = new Class({
          * @const {number} Phaser.Core.Config#loaderTimeout - Optional XHR timeout value, in ms.
          */
         this.loaderTimeout = GetValue(config, 'loader.timeout', 0);
+
+        /**
+         * @const {number} Phaser.Core.Config#loaderMaxRetries - The number of times to retry a file load if it fails.
+         */
+        this.loaderMaxRetries = GetValue(config, 'loader.maxRetries', 2);
 
         /**
          * @const {boolean} Phaser.Core.Config#loaderWithCredentials - Optional XHR withCredentials value.

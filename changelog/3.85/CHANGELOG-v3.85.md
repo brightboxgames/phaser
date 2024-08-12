@@ -26,6 +26,15 @@ In this release we have removed the shader uniform and branching and also made `
 * `Camera.preRender` has been updated to use both zoomX and zoomY for the matrix transform.
 * `Camera.preRender` has been updated to apply Math.floor to the scroll factor when rounding is enabled on the Camera. This fixes an issue where following sprites with Camera lerp, or heavy zoom factors, would cause 'stuttering' at sub-pixel values.
 
+# New Features - Loader
+
+The Loader now has a new feature called `maxRetries`. This specifies the number of times a single File will retry loading itself should it error for whatever reason, such as poor network connectivity. The default value is 2. You can change this in the Game Config, on the LoaderPlugin instance, on the FileConfig or on the File level itself. Thanks to @pavle-goloskokovic for the suggestion.
+
+* `loader.maxRetries` is a new Game Config option to set the number of retries a file will attempt to load. The default is 2.
+* `LoaderPlugin.maxRetries` is a new property that holds the number of times to retry loading a single file before it fails. This property is set via the Game Config, but can also be adjusted manually. Changing it doesn't not impact files already in the load queue, only those added later.
+* `FileConfig.maxRetries` is a new File Config option to set the number of retries a file will attempt to load. If not specified in the config, the value is read from the `LoaderPlugin.maxRetries` property.
+* `Loader.File.retryAttempts` is the internal property holding the counter for the number of times to retry loading this file before it fails. This value is decreased after each attempt. When it reaches zero, the file is considered as failed.
+
 # New Features
 
 * `BaseSoundManager.isPlaying` is a new method that will return a boolean if the given sound key is playing. If you don't provide a key, it will return a boolean if any sound is playing (thanks @samme)
@@ -44,12 +53,51 @@ In this release we have removed the shader uniform and branching and also made `
 * `Phaser.Core.TimeStep#pauseDuration` is a new property that holds the duration of the most recent game pause, if any, in ms (thanks @samme)
 * The Game `Events#RESUME` event now contains a new parameter `pauseDuration` which is the duration, in ms, that the game was paused for (thanks @samme)
 * Added `Phaser.Loader.LoaderPlugin#removePack` method to `LoaderPlugin` that removes resources listed in an Asset Pack.(thanks @samme)
+* When using `Scene.switch` you can now optionally specify a `data` argument, just like with Scene start, which will be passed along to the Scene that was switched to (thanks @wooseok123)
+
 
 # WebGL Rendering Updates
 
 * `WebGLTextureWrapper.update` expanded:
   * `source` parameter is now type `?object`, so it can be used for anything that is valid in the constructor.
   * New `format` parameter can update the texture format.
+
+# Updates - Input System
+
+* The `GameObject.disableInteractive` method has a new optional parameter `resetCursor`. If set, this will reset the current custom input cursor - regardless if the Game Object was the one that set it, or not.
+* The `GameObject.removeInteractive` method has a new optional parameter `resetCursor`. If set, this will reset the current custom input cursor - regardless if the Game Object was the one that set it, or not.
+* The `InputManager.resetCursor` method has a new optional boolean `forceReset` which will reset the state of the CSS canvas cursor, regardless if there is a given Interactive Object, or not.
+* The `InputPlugin.isActive` method will now check if the InputPlugin has the InputManager reference set, and if that is also enabled, as well as checking its own enabled state and that of the Scene.
+* `InputPlugin.resetCursor` is a new method that will reset a custom CSS cursor from the main canvas, regardless of the interactive state of any Game Objects.
+* The `InputPlugin.disable` method has a new optional boolean parameter `resetCursor` which will reset the CSS custom cursor if true.
+* `InputPlugin.setCursor` is a new method that will immediately set the CSS cursor to the given Interactive Objects cursor. Previously, this was hidden behind a private method in the Input Manager.
+
+All of the core Input Plugin process methods have been rewritten. The methods that have changed are:
+
+* `InputPlugin.processMoveEvents`
+* `InputPlugin.processWheelEvent`
+* `InputPlugin.processOverEvents`
+* `InputPlugin.processOutEvents`
+* `InputPlugin.processOverOutEvents`
+* `InputPlugin.processUpEvents`
+* `InputPlugin.processDownEvents`
+
+And they all now do the following flow:
+
+1) They will now iterate over the array of objects to be inspected. If the object doesn't have an input handler, or their handler has been disabled, they are skipped for event consideration.
+2) If they have an input handler, the Game Object specific event is dispatched (i.e. `sprite.on('pointerdown')`)
+3) The result of this call is checked. If the Event has been cancelled, or if the Input Plugin now returns `isActive() false` then it will break from the handler loop. This will only happen if the user explicitly tells the event to stop propogation, or if they disable either the Input Plugin, or the entire Input Manager, during the event handler. Previously, only the state of cancelled event was checked. Also previously, if the Game Objects own input handler was removed or disabled as a result of their event handler, it would break from the process loop. This no longer happens. It will carry on inspecting the remaining interactive objects in the loop, as long as the Input system itself wasn't disabled.
+4) After this, the Game Object is checked to see if it is still input enabled. If it is, the Scene level events, like `this.input.on('gameobjectdown')` are emitted.
+5) The results of this call are also checked. Again, if the Event has been cancelled, or if the Input Plugin now returns `isActive() false` then it will break from the handler loop, otherwise it carries on.
+6) After the loop is complete it does one final check to see if the Event was cancelled, or if the Input Plugin is no longer active. If both of those pass, it emits the final event from the Input Plugin itself (i.e. `this.input.on('pointerdown')` from a Scene)
+
+The above flow is new in v3.85 and will catch a lot more strange edge-cases, where Game Objects, or the Event, or the whole Input system is disabled during an active event handler. The above fixes #6833 (thanks @ddanushkin), #6766 (thanks @pabloNeuronup) and #6754 (thanks @orcomarcio)
+
+* `InputPlugin.forceDownState` is a new method that will force the given Game Object into the 'down' input state, regardless of what state it is currently in. This will emit the relevant events accordingly.
+* `InputPlugin.forceUpState` is a new method that will force the given Game Object into the 'up' input state, regardless of what state it is currently in. This will emit the relevant events accordingly.
+* `InputPlugin.forceOverState` is a new method that will force the given Game Object into the 'over' input state, regardless of what state it is currently in. This will emit the relevant events accordingly.
+* `InputPlugin.forceOutState` is a new method that will force the given Game Object into the 'out' input state, regardless of what state it is currently in. This will emit the relevant events accordingly.
+* `InputPlugin.forceState` is a new internal method that forces a Game Object into the given state.
 
 # Updates
 
@@ -84,8 +132,11 @@ In this release we have removed the shader uniform and branching and also made `
 * Resolved an issue in `BitmapText` where an extra empty line was added when `setMaxWidth` was called, and the width of the line was less than a word. Previously, `yAdvance` was incorrectly incremented by `lineHeight + lineSpacing` for each word, leading to an unintended increase in vertical space. The correction now calculates `yAdvance` based on the `currentLine` index, ensuring that vertical spacing accurately reflects the number of lines. Fix #6807 (thanks @AlvaroNeuronup)
 * Resolved an issue in `BitmapText` where adding a space character `' '` at the end of a line caused the following line of to ignore line wrapping when using `setMaxWidth`. Fix #6860 (thanks @bagyoni)
 * The `Matrix4.lookAtRH` method would fail because it called two missing Vector3 methods.
-* The `RenderTarget` will now automatically listen for the Renderer resize event if `autoResize` is true. This fixes an issue with Bitmap Masks where they wouldn't resize if the renderer resized. Fix #6769 (thanks @pavels)
+* The `RenderTarget` will now automatically listen for the Renderer resize event if `autoResize` is true. This fixes an issue with Bitmap Masks where they wouldn't resize if the renderer resized. Fix #6769 #6794 (thanks @pavels @seansps)
 * The `Texture.getFrameBounds` method will now include the BASE texture in its calculations. This prevents it from returning a size of Infinity. This fixes an issue where a Tileset with margin/spacing loaded via `load.spritesheet` instead of `load.image` would have its margin and spacing ignored. Fix #6823 (thanks @damian-pastorini)
+* If you used letter spacing on a `Text` Game Object, combined with stroke, the stroke would be mis-aligned. The stroke is now applied to the letter-spaced text as well (thanks @RomanFrom710)
+* The `PreFXPipeline.batchQuad` method will now apply `Math.round` to the target bounds center point. This prevents sub-pixel values during the `copyTextSubImage2D` call, preventing sprites with pre-fx from appearing mis-aligned during camera pans. Fix #6879 (thanks @Antriel)
+* If you had a sprite on the display list using the LightPipeline, followed by a Mesh using the LightPipeline, and you invalidated the mesh (i.e. by rotating it), it would cause a runtime error in the current batch. Fix #6822 (thanks @urueda)
 
 ## Input Bug Fixes
 
@@ -99,10 +150,14 @@ In this release we have removed the shader uniform and branching and also made `
 
 Thanks to the following for helping with the Phaser Examples, Beta Testing, Docs, and TypeScript definitions, either by reporting errors, fixing them, or helping author the docs:
 
-@lgtome
-@samme
 @AlbertMontagutCasero
+@Antriel
+@leha-games
+@lgtome
 @rexrainbow
+@saintflow47
+@samme
+@ssotangkur
 
 # Deprecation Warning for the next release
 
