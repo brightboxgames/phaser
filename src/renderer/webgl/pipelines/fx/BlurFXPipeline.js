@@ -193,7 +193,8 @@ var BlurFXPipeline = new Class({
         gl.bindFramebuffer(gl.FRAMEBUFFER, currentFBO);
         gl.bindTexture(gl.TEXTURE_2D, null);
 
-        this.copyToGame(target1);
+        // this.copyToGame(target1);
+        this.bindAndDraw(target1);
     }
 
 });
