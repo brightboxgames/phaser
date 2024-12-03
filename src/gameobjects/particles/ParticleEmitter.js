@@ -22,7 +22,9 @@ var HasValue = require('../../utils/object/HasValue');
 var Inflate = require('../../geom/rectangle/Inflate');
 var List = require('../../structs/List');
 var MergeRect = require('../../geom/rectangle/MergeRect');
+var MergeRight = require('../../utils/object/MergeRight');
 var Particle = require('./Particle');
+var ParticleBounds = require('./ParticleBounds');
 var RandomZone = require('./zones/RandomZone');
 var Rectangle = require('../../geom/rectangle/Rectangle');
 var RectangleToRectangle = require('../../geom/intersects/RectangleToRectangle');
@@ -32,7 +34,6 @@ var StableSort = require('../../utils/array/StableSort');
 var TransformMatrix = require('../components/TransformMatrix');
 var Vector2 = require('../../math/Vector2');
 var Wrap = require('../../math/Wrap');
-var ParticleBounds = require('./ParticleBounds');
 
 /**
  * Names of simple configuration properties.
@@ -378,7 +379,7 @@ var ParticleEmitter = new Class({
          *
          * @name Phaser.GameObjects.Particles.ParticleEmitter#config
          * @type {Phaser.Types.GameObjects.Particles.ParticleEmitterConfig}
-         * @since 3.90.0
+         * @since 3.85.0
          */
         this.config = null;
             
@@ -1083,18 +1084,16 @@ var ParticleEmitter = new Class({
      */
     updateConfig: function (config)
     {
-        if (!config)
+        if (config)
         {
-            return this;
-        }
-
-        if (!this.config)
-        {
-            this.setConfig(config);
-        }
-        else
-        {
-            this.setConfig({...this.config, ...config});
+            if (!this.config)
+            {
+                this.setConfig(config);
+            }
+            else
+            {
+                this.setConfig(MergeRight(this.config, config));
+            }
         }
         
         return this;
@@ -1377,6 +1376,8 @@ var ParticleEmitter = new Class({
      * anim: 'red'
      * anim: [ 'red', 'green', 'blue', 'pink', 'white' ]
      * anim: { anims: [ 'red', 'green', 'blue', 'pink', 'white' ], [cycle: bool], [quantity: int] }
+     *
+     * Call this method at least once before any particles are created, or set `anim` in the Particle Emitter's configuration when creating the Emitter.
      *
      * @method Phaser.GameObjects.Particles.ParticleEmitter#setAnim
      * @since 3.60.0
@@ -1807,7 +1808,7 @@ var ParticleEmitter = new Class({
      * or any object with a suitable {@link Phaser.Types.GameObjects.Particles.EdgeZoneSourceCallback getPoints} method.
      *
      * A {@link Phaser.Types.GameObjects.Particles.ParticleEmitterRandomZoneConfig RandomZone} places the particles randomly within its interior.
-     * Its {@link RandomZoneSource source} can be a Circle, Ellipse, Line, Polygon, Rectangle, or Triangle; or any object with a suitable {@link Phaser.Types.GameObjects.Particles.RandomZoneSourceCallback getRandomPoint} method.
+     * Its {@link Phaser.GameObjects.Particles.Zones.RandomZone#source source} can be a Circle, Ellipse, Line, Polygon, Rectangle, or Triangle; or any object with a suitable {@link Phaser.Types.GameObjects.Particles.RandomZoneSourceCallback getRandomPoint} method.
      *
      * An Emission Zone can only exist once within this Emitter.
      *

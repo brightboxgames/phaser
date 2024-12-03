@@ -89,123 +89,105 @@ var Depth = {
     },
 
     /**
-     * Bring this Game Object to top of display list.
+     * Sets this Game Object to be at the top of the display list, or the top of its parent container.
+     * 
+     * Being at the top means it will render on-top of everything else.
+     * 
+     * This method does not change this Game Objects `depth` value, it simply alters its list position.
      *
-     * @method Phaser.GameObjects.Components.Depth#bringMeToTop
-     * @since 3.80.2
+     * @method Phaser.GameObjects.Components.Depth#setToTop
+     * @since 3.85.0
+     * 
      * @return {this} This Game Object instance.
      */
-    bringMeToTop: function()
+    setToTop: function ()
     {
-        var list;
-        if (this.parentContainer)
-        {
-            list = this.parentContainer.list;
-        }
-        else if (this.displayList)
-        {
-            list = this.displayList.list;
-        }
+        var list = this.getDisplayList();
 
-        if (!list)
+        if (list)
         {
-            return this;
+            ArrayUtils.BringToTop(list, this);
         }
-
-        ArrayUtils.BringToTop(list, this);
 
         return this;
     },
 
     /**
-     * Send this Game Object to bottom of display list.
+     * Sets this Game Object to the back of the display list, or the back of its parent container.
+     * 
+     * Being at the back means it will render below everything else.
+     * 
+     * This method does not change this Game Objects `depth` value, it simply alters its list position.
      *
-     * @method Phaser.GameObjects.Components.Depth#sendMeToBack
-     * @since 3.80.2
+     * @method Phaser.GameObjects.Components.Depth#setToBack
+     * @since 3.85.0
+     * 
      * @return {this} This Game Object instance.
      */
-    sendMeToBack: function()
+    setToBack: function ()
     {
-        var list;
-        if (this.parentContainer)
-        {
-            list = this.parentContainer.list;
-        }
-        else if (this.displayList)
-        {
-            list = this.displayList.list;
-        }
+        var list = this.getDisplayList();
 
-        if (!list)
+        if (list)
         {
-            return this;
+            ArrayUtils.SendToBack(list, this);
         }
-
-        ArrayUtils.SendToBack(list, this);
 
         return this;
     },
 
     /**
-     * Move this Game Object below another Game Object.
-     *
-     * @method Phaser.GameObjects.Components.Depth#moveMyDepthBelow
-     * @since 3.80.2
+     * Move this Game Object so that it appears above the given Game Object.
      * 
-     * @param {Phaser.GameObjects.GameObject} gameObject - Move this Game Object below this Game Object.
+     * This means it will render immediately after the other object in the display list.
+     * 
+     * Both objects must belong to the same display list, or parent container.
+     * 
+     * This method does not change this Game Objects `depth` value, it simply alters its list position.
+     *
+     * @method Phaser.GameObjects.Components.Depth#setAbove
+     * @since 3.85.0
+     * 
+     * @param {Phaser.GameObjects.GameObject} gameObject - The Game Object that this Game Object will be moved to be above.
      * 
      * @return {this} This Game Object instance.
      */
-    moveMyDepthBelow: function(gameObject)
+    setAbove: function (gameObject)
     {
-        var list;
-        if (this.parentContainer)
-        {
-            list = this.parentContainer.list;
-        }
-        else if (this.displayList)
-        {
-            list = this.displayList.list;
-        }
+        var list = this.getDisplayList();
 
-        if (!list)
+        if (list && gameObject)
         {
-            return this;
+            ArrayUtils.MoveAbove(list, this, gameObject);
         }
-
-        ArrayUtils.MoveBelow(list, this, gameObject);
 
         return this;
     },
 
     /**
-     * Move this Game Object above another Game Object.
-     *
-     * @method Phaser.GameObjects.Components.Depth#moveMyDepthAbove
-     * @since 3.80.2
+     * Move this Game Object so that it appears below the given Game Object.
      * 
-     * @param {Phaser.GameObjects.GameObject} gameObject - Move this Game Object above this Game Object.
+     * This means it will render immediately under the other object in the display list.
+     * 
+     * Both objects must belong to the same display list, or parent container.
+     * 
+     * This method does not change this Game Objects `depth` value, it simply alters its list position.
+     *
+     * @method Phaser.GameObjects.Components.Depth#setBelow
+     * @since 3.85.0
+     * 
+     * @param {Phaser.GameObjects.GameObject} gameObject - The Game Object that this Game Object will be moved to be below.
      * 
      * @return {this} This Game Object instance.
      */
-    moveMyDepthAbove: function(gameObject)
+    setBelow: function (gameObject)
     {
-        var list;
-        if (this.parentContainer)
-        {
-            list = this.parentContainer.list;
-        }
-        else if (this.displayList)
-        {
-            list = this.displayList.list;
-        }
+        var list = this.getDisplayList();
 
-        if (!list)
+        if (list && gameObject)
         {
-            return this;
+            ArrayUtils.MoveBelow(list, this, gameObject);
         }
-
-        ArrayUtils.MoveAbove(list, this, gameObject);
 
         return this;
     }

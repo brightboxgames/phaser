@@ -176,7 +176,7 @@ var Config = new Class({
         /**
          * @const {string} Phaser.Core.Config#gameURL - The URL of the game.
          */
-        this.gameURL = GetValue(config, 'url', 'https://phaser.io/v385/');
+        this.gameURL = GetValue(config, 'url', 'https://phaser.io/' + CONST.LOG_VERSION);
 
         /**
          * @const {string} Phaser.Core.Config#gameVersion - The version of the game.
@@ -312,7 +312,7 @@ var Config = new Class({
         //  If you do: { banner: false } it won't display any banner at all
 
         /**
-         * @const {boolean} Phaser.Core.Config#hideBanner - Don't write the banner line to the console.log. See `Phaser.TYpes.Core.BannerConfig` for details of this object.
+         * @const {boolean} Phaser.Core.Config#hideBanner - Don't write the banner line to the console.log. See `Phaser.Types.Core.BannerConfig` for details of this object.
          */
         this.hideBanner = (GetValue(config, 'banner', null) === false);
 
@@ -356,7 +356,7 @@ var Config = new Class({
         var renderConfig = GetValue(config, 'render', null);
 
         /**
-         * @const {(Phaser.Types.Core.PipelineConfig|Phaser.Renderer.WebGL.WebGLPipeline[])} Phaser.Core.Config#pipeline - An object mapping WebGL names to WebGLPipeline classes. These should be class constructors, not instances.
+         * @const {Phaser.Types.Core.PipelineConfig} Phaser.Core.Config#pipeline - An object mapping WebGL names to WebGLPipeline classes. These should be class constructors, not instances.
          */
         this.pipeline = GetValue(renderConfig, 'pipeline', null, config);
 

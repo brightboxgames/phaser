@@ -1,4 +1,4 @@
-# Version 3.85.0 - Itsuki - in development
+# Version 3.85.0 - Itsuki - 5th September 2024
 
 # MatterJS
 
@@ -8,6 +8,7 @@
 * Integrated `MatterCollisionEvents` plugin functionality directly into the `Matter.World` class to handle collisions more effectively. [More details here](MatterCollisionEvents.md).
 * Updated `Matter.World` to improve the performance, accuracy, and reliability of the `update` method in handling physics simulations or animations. [More details here](MatterWorldUpdate.md).
 * Fixed `Matter.World` bug where `group.length` returns `undefined`. Changed to `group.getLength()` to correctly return number of children in a group.
+* Calling `Matter.World.pause` would stop the world updating, but the Runner `timeLastTick` wasn't reset when `resume` was called, causing all the bodies to advance. The time is now reset correctly. Fix #6892 (thanks @philipgriffin)
 
 # Round Pixels
 
@@ -54,7 +55,13 @@ The Loader now has a new feature called `maxRetries`. This specifies the number 
 * The Game `Events#RESUME` event now contains a new parameter `pauseDuration` which is the duration, in ms, that the game was paused for (thanks @samme)
 * Added `Phaser.Loader.LoaderPlugin#removePack` method to `LoaderPlugin` that removes resources listed in an Asset Pack.(thanks @samme)
 * When using `Scene.switch` you can now optionally specify a `data` argument, just like with Scene start, which will be passed along to the Scene that was switched to (thanks @wooseok123)
-
+* `PRE_RENDER_CLEAR` is a new event dispatched by the WebGL and Canvas Renderer. It's dispatched at the start of the render step, immediately before the canvas is cleared. This allows you to toggle the `clearBeforeRender` property as required, to have fine-grained control over when the canvas is cleared during render.
+* `Video.getFirstFrame` is a new method that can be used to load the first frame of the Video into its texture without starting playback. This is useful if you want to display the first frame of a video behind a 'Play' button, without calling the 'play' method.
+* `GameObject.getDisplayList` is a new method that will return the underlying list object that the Game Object belongs to, either the display list or its parent container.
+* `GameObject.setToTop` is a new method that will move the Game Object to the top of the display list, or its parent container (thanks @rexrainbow)
+* `GameObject.setToBack` is a new method that will move the Game Object to the bottom of the display list, or its parent container (thanks @rexrainbow)
+* `GameObject.setAbove` is a new method that will move the Game Object to appear above a given Game Object (thanks @rexrainbow)
+* `GameObject.setBelow` is a new method that will move the Game Object to appear below a given Game Object (thanks @rexrainbow)
 
 # WebGL Rendering Updates
 
@@ -101,6 +108,7 @@ The above flow is new in v3.85 and will catch a lot more strange edge-cases, whe
 
 # Updates
 
+* Added `Phaser.Scale.ScaleManager.leaveFullScreenSuccessHandler` method to separate `Events.LEAVE_FULLSCREEN` from `Phaser.Scale.ScaleManager.stopFullscreen` to ensure `Events.LEAVE_FULLSCREEN` is only emitted once when exiting fullscreen mode. (Fix #6885, thanks @Antriel)
 * Calling `Timeline.pause` will now pause any currently active Tweens that the Timeline had started (thanks @monteiz)
 * Calling `Timeline.resume` will now resume any currently paused Tweens that the Timeline had started (thanks @monteiz)
 * Calling `Timeline.clear` and `Timeline.destroy` will now destroy any currently active Tweens that the Timeline had created. Previously, active tweens would continue to play to completion (thanks @monteiz)
@@ -137,6 +145,11 @@ The above flow is new in v3.85 and will catch a lot more strange edge-cases, whe
 * If you used letter spacing on a `Text` Game Object, combined with stroke, the stroke would be mis-aligned. The stroke is now applied to the letter-spaced text as well (thanks @RomanFrom710)
 * The `PreFXPipeline.batchQuad` method will now apply `Math.round` to the target bounds center point. This prevents sub-pixel values during the `copyTextSubImage2D` call, preventing sprites with pre-fx from appearing mis-aligned during camera pans. Fix #6879 (thanks @Antriel)
 * If you had a sprite on the display list using the LightPipeline, followed by a Mesh using the LightPipeline, and you invalidated the mesh (i.e. by rotating it), it would cause a runtime error in the current batch. Fix #6822 (thanks @urueda)
+* The Arcade Physics `processCallback` will now correctly handle non-Game Object physics bodies and pass them to the callback (thanks @ospira)
+* If you set a `WebAudioSound` to loop and set `SoundManager.pauseOnBlur = false`, then if you start the sound and tab away from Phaser, the sound wouldn't then loop on return to the game, if the loop _expired_ while the tab was out of focus. This was due to checking the audio source node target against the wrong internal property. Fix #6702 (thanks @michalfialadev)
+* The `Mesh` WebGLRenderer will now recalculate the `vertexOffset` correctly if the batch flushes, fixing an issue where it would display missing triangles in a mesh after a batch flush. Fix #6814 (thanks @pavels)
+* The `NineSlice` Game Object will now guard against an invalid texture by checking for the `frame` and `textureFrame` vars before trying to read values from them. Fix #6804 (thanks @IvanDem)
+* DOM Game Elements are now kept in the correct position when a Scene camera zooms out. Previously, they only worked if you kept their origin at 0x0, or didn't zoom the camera out. Fix #6817 #6607 (thanks @moufmouf)
 
 ## Input Bug Fixes
 
@@ -151,13 +164,16 @@ The above flow is new in v3.85 and will catch a lot more strange edge-cases, whe
 Thanks to the following for helping with the Phaser Examples, Beta Testing, Docs, and TypeScript definitions, either by reporting errors, fixing them, or helping author the docs:
 
 @AlbertMontagutCasero
+@Andrek25
 @Antriel
 @leha-games
 @lgtome
+@monteiz
 @rexrainbow
 @saintflow47
 @samme
 @ssotangkur
+@vankop
 
 # Deprecation Warning for the next release
 
@@ -168,3 +184,5 @@ The _next release_ of Phaser will make the following API-breaking changes:
 * The `Create.GenerateTexture`, all of the Create Palettes and the `create` folder will be removed.
 * The `phaser-ie9.js` entry-point will be removed along with all associated polyfills.
 * The Spine 3 and Spine 4 plugins will no longer be updated. You should now use the official Phaser Spine plugin created by Esoteric Software.
+* The `Geom.Point` class and all related functions will be removed. All functionality for this can be found in the existing Vector2 math classes. All Geometry classes that currently create and return Point objects will be updated to return Vector2 objects instead.
+* We will be moving away from Webpack and using ESBuild to build the next version of Phaser.

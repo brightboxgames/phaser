@@ -1164,6 +1164,8 @@ var World = new Class({
     {
         this.enabled = true;
 
+        this.runner.timeLastTick = Common.now();
+
         this.emit(Events.RESUME);
 
         return this;
@@ -1189,7 +1191,7 @@ var World = new Class({
      * @param {number} time - The current time. Either a High Resolution Timer value if it comes from Request Animation Frame, or Date.now if using SetTimeout.
      * @param {number} delta - The delta time in ms since the last frame. This is a smoothed and capped value based on the FPS rate.
      */
-    update: function (time, delta)
+    update: function (time)
     {
         if (!this.enabled || !this.autoUpdate)
         {

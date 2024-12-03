@@ -431,12 +431,14 @@ var ScaleManager = new Class({
 
         this.fullscreen = game.device.fullscreen;
 
-        if ((this.scaleMode !== CONST.SCALE_MODE.RESIZE) && (this.scaleMode !== CONST.SCALE_MODE.EXPAND))
+        var scaleMode = this.scaleMode;
+
+        if (scaleMode !== CONST.SCALE_MODE.RESIZE && scaleMode !== CONST.SCALE_MODE.EXPAND)
         {
-            this.displaySize.setAspectMode(this.scaleMode);
+            this.displaySize.setAspectMode(scaleMode);
         }
 
-        if (this.scaleMode === CONST.SCALE_MODE.NONE)
+        if (scaleMode === CONST.SCALE_MODE.NONE)
         {
             this.resize(this.width, this.height);
         }
@@ -1104,18 +1106,16 @@ var ScaleManager = new Class({
             style.width = styleWidth + 'px';
             style.height = styleHeight + 'px';
 
-
             // Expand canvas size to fit game size's width or height
 
             var scaleX = this.parentSize.width / baseWidth;
-
             var scaleY = this.parentSize.height / baseHeight;
 
-            if (scaleX < scaleY)
+            if (scaleX < scaleY && scaleX !== 0)
             {
                 this.baseSize.setSize(baseWidth, this.parentSize.height / scaleX);
             }
-            else
+            else if (scaleY !== 0)
             {
                 this.baseSize.setSize(this.displaySize.width / scaleY, baseHeight);
             }
@@ -1438,7 +1438,6 @@ var ScaleManager = new Class({
      * Calling this method will cancel fullscreen mode, if the browser has entered it.
      *
      * @method Phaser.Scale.ScaleManager#stopFullscreen
-     * @fires Phaser.Scale.Events#LEAVE_FULLSCREEN
      * @fires Phaser.Scale.Events#FULLSCREEN_UNSUPPORTED
      * @since 3.16.0
      */
@@ -1459,7 +1458,17 @@ var ScaleManager = new Class({
         }
 
         this.removeFullscreenTarget();
+    },
 
+    /**
+     * The browser has successfully left fullscreen mode.
+     *
+     * @method Phaser.Scale.ScaleManager#leaveFullScreenSuccessHandler
+     * @fires Phaser.Scale.Events#LEAVE_FULLSCREEN
+     * @since 3.85.0
+     */
+    leaveFullScreenSuccessHandler: function ()
+    {
         //  Get the parent size again as it will have changed
         this.getParentBounds();
 
@@ -1582,6 +1591,7 @@ var ScaleManager = new Class({
         {
             //  They pressed ESC while in fullscreen mode
             this.stopFullscreen();
+            this.leaveFullScreenSuccessHandler();
         }
     },
 
