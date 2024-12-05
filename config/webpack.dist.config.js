@@ -19,6 +19,7 @@ module.exports = [
             'phaser-ie9': './phaser-ie9.js',
             'phaser-ie9.min': './phaser-ie9.js',
             'phaser-nova-small': './phaser-nova-small.js',
+            'phaser-nova-small.min': './phaser-nova-small.js'
         },
 
         output: {
