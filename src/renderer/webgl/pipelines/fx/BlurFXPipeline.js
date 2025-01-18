@@ -184,10 +184,10 @@ var BlurFXPipeline = new Class({
         for (var i = 0; i < controller.steps; i++)
         {
             this.set2f('offset', controller.x, 0);
-            this.copySprite(target1, target2);
+         //   this.copySprite(target1, target2);
 
             this.set2f('offset', 0, controller.y);
-            this.copySprite(target2, target1);
+       //     this.copySprite(target2, target1);
         }
 
         gl.bindFramebuffer(gl.FRAMEBUFFER, currentFBO);
