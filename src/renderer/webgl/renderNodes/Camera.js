@@ -16,8 +16,6 @@ function getAlphaTint (alpha)
     return Utils.getTintAppendFloatAlpha(0xffffff, alpha);
 }
 
-var blankRenderOptions = {};
-
 /**
  * @class Camera
  * @memberof Phaser.Renderer.WebGL.RenderNodes
@@ -73,7 +71,7 @@ var Camera = new Class({
      * @param {Phaser.Renderer.WebGL.DrawingContext} drawingContext - The context currently in use.
      * @param {Phaser.GameObjects.GameObject[]} children - The list of children to render.
      * @param {Phaser.Cameras.Scene2D.Camera} camera - Current Camera.
-     * @param {Phaser.GameObjects.Components.TransformMatrix} [parentTransformMatrix] - This transform matrix is defined if the game object is nested
+     * @param {Phaser.GameObjects.Components.TransformMatrix} [parentTransformMatrix] - This transform matrix is defined if the camera is focused on a filtered object.
      * @param {boolean} [forceFramebuffer=false] - Should the camera always draw to a new framebuffer? This will also be activated if the camera has filters enabled.
      * @param {number} [renderStep=0] - Which step of the rendering process is this? This is the index of the currently running function in a list of functions.
      */
@@ -163,7 +161,10 @@ var Camera = new Class({
             var index, filter, padding, renderNode, tint;
 
             // Set up render options.
-            blankRenderOptions.smoothPixelArt = manager.renderer.game.config.smoothPixelArt;
+            var renderOptions = {
+                smoothPixelArt: manager.renderer.game.config.smoothPixelArt,
+                roundPixels: camera.roundPixels
+            };
 
             // Draw internal filters.
             var coverageInternal = new Rectangle(0, 0, currentContext.width, currentContext.height);
@@ -236,16 +237,18 @@ var Camera = new Class({
                 var quad;
                 if (parentTransformMatrix)
                 {
+                    // We're drawing a filtered object.
                     parentTransformMatrix.setQuad(
                         coverageInternal.x,
                         coverageInternal.y,
-                        coverageInternal.width,
-                        coverageInternal.height
+                        coverageInternal.x + coverageInternal.width,
+                        coverageInternal.y + coverageInternal.height
                     );
                     quad = parentTransformMatrix.quad;
                 }
                 else
                 {
+                    // We're drawing a camera.
                     var offsetX = (currentContext.width - outputContext.width) / 2;
                     var offsetY = (currentContext.height - outputContext.height) / 2;
                     var w = currentContext.width - offsetX;
@@ -278,7 +281,7 @@ var Camera = new Class({
                     quad[4] - externalX, quad[5] - externalY,
 
                     // Texture coordinates in X, Y, Width, Height:
-                    0, 0, 1, 1,
+                    0, 1, 1, -1,
 
                     // Tint color:
                     tint,
@@ -287,7 +290,7 @@ var Camera = new Class({
                     tint, tint, tint, tint,
 
                     // Render options:
-                    blankRenderOptions
+                    renderOptions
                 );
             }
 
@@ -373,7 +376,7 @@ var Camera = new Class({
                         tint, tint, tint, tint,
 
                         // Render options:
-                        blankRenderOptions
+                        renderOptions
                     );
 
                     currentContext.release();

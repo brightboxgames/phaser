@@ -355,6 +355,10 @@ var SubmitterTilemapGPULayer = new Class({
         var programManager = this.programManager;
         var texture = gameObject.tileset.image;
 
+        // We do not track whether the shader program has changed.
+        // This is because this is not a batch renderer,
+        // and the program is set every time this is called.
+
         // Set animation options.
         var animAddition = programManager.getAdditionsByTag('MAXANIMS')[0];
         if (animAddition)
@@ -470,7 +474,6 @@ var SubmitterTilemapGPULayer = new Class({
             y,
             x + width,
             y + height,
-            false,
             quad
         );
 
@@ -484,27 +487,25 @@ var SubmitterTilemapGPULayer = new Class({
         vertexF32[offset32++] = quad[2];
         vertexF32[offset32++] = quad[3];
         vertexF32[offset32++] = 0;
-        vertexF32[offset32++] = 1;
+        vertexF32[offset32++] = 0;
 
         // Top Left.
         vertexF32[offset32++] = quad[0];
         vertexF32[offset32++] = quad[1];
         vertexF32[offset32++] = 0;
-        vertexF32[offset32++] = 0;
+        vertexF32[offset32++] = 1;
 
         // Bottom Right.
         vertexF32[offset32++] = quad[4];
         vertexF32[offset32++] = quad[5];
         vertexF32[offset32++] = 1;
-        vertexF32[offset32++] = 1;
+        vertexF32[offset32++] = 0;
 
         // Top Right.
         vertexF32[offset32++] = quad[6];
         vertexF32[offset32++] = quad[7];
         vertexF32[offset32++] = 1;
-        vertexF32[offset32++] = 0;
-
-        // console.log('Update vertex buffer', stride, this.vertexBufferLayout, vertexBuffer);
+        vertexF32[offset32++] = 1;
 
         // Update vertex buffer.
         // Because we are probably using a generic vertex buffer

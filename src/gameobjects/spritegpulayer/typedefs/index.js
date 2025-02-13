@@ -5,5 +5,5 @@
  */
 
 /**
- * @namespace Phaser.Types.Geom.Mesh
+ * @namespace Phaser.Types.GameObjects.SpriteGPULayer
  */

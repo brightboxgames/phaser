@@ -91,10 +91,6 @@ var ParticleEmitterWebGLRenderer = function (renderer, emitter, drawingContext, 
 
         particleMatrix.applyITRS(particle.x, particle.y, particle.rotation, particle.scaleX, particle.scaleY);
 
-        //  Undo the camera scroll
-        particleMatrix.e = particle.x;
-        particleMatrix.f = particle.y;
-
         //  Multiply by the particle matrix, store result in calcMatrix
         camMatrix.multiply(particleMatrix, calcMatrix);
 
@@ -103,7 +99,7 @@ var ParticleEmitterWebGLRenderer = function (renderer, emitter, drawingContext, 
         var x = -frame.halfWidth;
         var y = -frame.halfHeight;
 
-        calcMatrix.setQuad(x, y, x + frame.width, y + frame.height, false, tempTransformer.quad);
+        calcMatrix.setQuad(x, y, x + frame.width, y + frame.height, tempTransformer.quad);
 
         if (tempTexturer.frame !== frame)
         {

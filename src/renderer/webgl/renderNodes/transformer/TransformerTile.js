@@ -105,12 +105,15 @@ var TransformerTile = new Class({
         // Multiply by the Sprite matrix, store result in calcMatrix
         camMatrix.multiply(spriteMatrix, calcMatrix);
 
+        // Determine whether the matrix does not rotate, scale, or skew.
+        var cmm = calcMatrix.matrix;
+        this.onlyTranslate = cmm[0] === 1 && cmm[1] === 0 && cmm[2] === 0 && cmm[3] === 1;
+
         calcMatrix.setQuad(
             x,
             y,
             x + width,
             y + height,
-            false,
             this.quad
         );
 

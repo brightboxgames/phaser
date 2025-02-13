@@ -11,6 +11,8 @@ module.exports = {
     STAMP: 2,
     REPEAT: 3,
     DRAW: 4,
-    SET_ERASE: 5
+    SET_ERASE: 5,
+    PRESERVE: 6,
+    CALLBACK: 7
 
 };

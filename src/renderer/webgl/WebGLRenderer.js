@@ -27,7 +27,6 @@ var WebGLTextureWrapper = require('./wrappers/WebGLTextureWrapper');
 var WebGLTextureUnitsWrapper = require('./wrappers/WebGLTextureUnitsWrapper');
 var WebGLFramebufferWrapper = require('./wrappers/WebGLFramebufferWrapper');
 var WebGLVAOWrapper = require('./wrappers/WebGLVAOWrapper');
-var WebGLAttribLocationWrapper = require('./wrappers/WebGLAttribLocationWrapper');
 var WebGLBlendParametersFactory = require('./parameters/WebGLBlendParametersFactory');
 var WebGLGlobalParametersFactory = require('./parameters/WebGLGlobalParametersFactory');
 var RenderNodeManager = require('./renderNodes/RenderNodeManager');
@@ -305,15 +304,6 @@ var WebGLRenderer = new Class({
         this.glFramebufferWrappers = [];
 
         /**
-         * A list of all WebGLAttribLocationWrappers that have been created by this renderer.
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#glAttribLocationWrappers
-         * @type {Phaser.Renderer.WebGL.Wrappers.WebGLAttribLocationWrapper[]}
-         * @since 3.80.0
-         */
-        this.glAttribLocationWrappers = [];
-
-        /**
          * A list of all WebGLVAOWrappers that have been created by this renderer.
          *
          * @name Phaser.Renderer.WebGL.WebGLRenderer#glVAOWrappers
@@ -371,53 +361,6 @@ var WebGLRenderer = new Class({
          * @since 4.0.0
          */
         this.drawingContextPool = new DrawingContextPool(this, 1000, 1024);
-
-        /**
-         * Current WebGLProgram in use.
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#currentProgram
-         * @type {Phaser.Renderer.WebGL.Wrappers.WebGLProgramWrapper}
-         * @default null
-         * @since 3.0.0
-         */
-        this.currentProgram = null;
-
-        /**
-         * Current blend mode in use
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#currentBlendMode
-         * @type {number}
-         * @since 3.0.0
-         */
-        this.currentBlendMode = Infinity;
-
-        /**
-         * Indicates if the the scissor state is enabled in WebGLRenderingContext
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#currentScissorEnabled
-         * @type {boolean}
-         * @default false
-         * @since 3.0.0
-         */
-        this.currentScissorEnabled = false;
-
-        /**
-         * Stores the current scissor data
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#currentScissor
-         * @type {Uint32Array}
-         * @since 3.0.0
-         */
-        this.currentScissor = null;
-
-        /**
-         * Stack of scissor data
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#scissorStack
-         * @type {Uint32Array}
-         * @since 3.0.0
-         */
-        this.scissorStack = [];
 
         /**
          * The handler to invoke when the context is lost.
@@ -615,45 +558,6 @@ var WebGLRenderer = new Class({
         this.shaderSetters = null;
 
         /**
-         * The `type` of the Game Object being currently rendered.
-         * This can be used by advanced render functions for batching look-ahead.
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#currentType
-         * @type {string}
-         * @since 3.19.0
-         */
-        this.currentType = '';
-
-        /**
-         * Is the `type` of the Game Object being currently rendered different than the
-         * type of the object before it in the display list? I.e. it's a 'new' type.
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#newType
-         * @type {boolean}
-         * @since 3.19.0
-         */
-        this.newType = false;
-
-        /**
-         * Does the `type` of the next Game Object in the display list match that
-         * of the object being currently rendered?
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#nextTypeMatch
-         * @type {boolean}
-         * @since 3.19.0
-         */
-        this.nextTypeMatch = false;
-
-        /**
-         * Is the Game Object being currently rendered the final one in the list?
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#finalType
-         * @type {boolean}
-         * @since 3.50.0
-         */
-        this.finalType = false;
-
-        /**
          * The mipmap magFilter to be used when creating textures.
          *
          * You can specify this as a string in the game config, i.e.:
@@ -722,8 +626,7 @@ var WebGLRenderer = new Class({
         /**
          * The cached flipY state of the Projection matrix.
          *
-         * This is set to `true` when rendering to a Framebuffer,
-         * and `false` when rendering to the canvas.
+         * This is usually `false`, preserving WebGL coordinate space.
          *
          * @name Phaser.Renderer.WebGL.WebGLRenderer#projectionFlipY
          * @type {boolean}
@@ -872,9 +775,6 @@ var WebGLRenderer = new Class({
             _this.glWrapper.update(WebGLGlobalParametersFactory.getDefault(_this), true);
             _this.glTextureUnits.init();
 
-            // Clear "current" settings so they can be set again.
-            _this.currentProgram = null;
-
             // Re-enable compressed texture formats.
             _this.compression = _this.getCompressedTextures();
 
@@ -888,7 +788,6 @@ var WebGLRenderer = new Class({
             ArrayEach(_this.glBufferWrappers, wrapperCreateResource);
             ArrayEach(_this.glFramebufferWrappers, wrapperCreateResource);
             ArrayEach(_this.glProgramWrappers, wrapperCreateResource);
-            ArrayEach(_this.glAttribLocationWrappers, wrapperCreateResource);
             ArrayEach(_this.glVAOWrappers, wrapperCreateResource);
 
             // Restore texture unit assignment.
@@ -1451,13 +1350,13 @@ var WebGLRenderer = new Class({
             this.projectionHeight = height;
             this.projectionFlipY = !!flipY;
 
-            if (!flipY)
+            if (flipY)
             {
-                this.projectionMatrix.ortho(0, width, height, 0, -1000, 1000);
+                this.projectionMatrix.ortho(0, width, 0, height, -1000, 1000);
             }
             else
             {
-                this.projectionMatrix.ortho(0, width, 0, height, -1000, 1000);
+                this.projectionMatrix.ortho(0, width, height, 0, -1000, 1000);
             }
         }
 
@@ -1479,7 +1378,7 @@ var WebGLRenderer = new Class({
         return this.setProjectionMatrix(
             drawingContext.width,
             drawingContext.height,
-            !drawingContext.framebuffer.useCanvas
+            false
         );
     },
 
@@ -1722,7 +1621,7 @@ var WebGLRenderer = new Class({
      * @param {?number} height - Height of the texture in pixels. If not supplied, it must be derived from `pixels`.
      * @param {boolean} [pma=true] - Does the texture have premultiplied alpha?
      * @param {boolean} [forceSize=false] - If `true` it will use the width and height passed to this method, regardless of the pixels dimension.
-     * @param {boolean} [flipY=false] - Sets the `UNPACK_FLIP_Y_WEBGL` flag the WebGL Texture uses during upload.
+     * @param {boolean} [flipY=true] - Sets the `UNPACK_FLIP_Y_WEBGL` flag the WebGL Texture uses during upload.
      *
      * @return {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} The WebGLTextureWrapper that was created.
      */
@@ -1807,23 +1706,6 @@ var WebGLRenderer = new Class({
         var vertexBuffer = new WebGLBufferWrapper(this, initialDataOrSize, gl.ARRAY_BUFFER, bufferUsage);
         this.glBufferWrappers.push(vertexBuffer);
         return vertexBuffer;
-    },
-
-    /**
-     * Creates a WebGLAttribLocationWrapper instance based on the given WebGLProgramWrapper and attribute name.
-     *
-     * @method Phaser.Renderer.WebGL.WebGLRenderer#createAttribLocation
-     * @since 3.80.0
-     *
-     * @param {Phaser.Renderer.WebGL.Wrappers.WebGLProgramWrapper} program - The WebGLProgramWrapper instance.
-     * @param {string} name - The name of the attribute.
-     * @return {Phaser.Renderer.WebGL.Wrappers.WebGLAttribLocationWrapper} The wrapped attribute location.
-     */
-    createAttribLocation: function (program, name)
-    {
-        var attrib = new WebGLAttribLocationWrapper(this.gl, program, name);
-        this.glAttribLocationWrappers.push(attrib);
-        return attrib;
     },
 
     /**
@@ -1920,24 +1802,6 @@ var WebGLRenderer = new Class({
         {
             ArrayRemove(this.glProgramWrappers, program);
             program.destroy();
-        }
-
-        return this;
-    },
-
-    /**
-     * Deletes a shader attribute location from the GL instance.
-     *
-     * @method Phaser.Renderer.WebGL.WebGLRenderer#deleteAttribLocation
-     * @param {Phaser.Renderer.WebGL.Wrappers.WebGLAttribLocationWrapper} attrib - The attrib location to be deleted.
-     * @since 3.80.0
-     */
-    deleteAttribLocation: function (attrib)
-    {
-        if (attrib)
-        {
-            ArrayRemove(this.glAttribLocationWrappers, attrib);
-            attrib.destroy();
         }
 
         return this;
@@ -2298,14 +2162,14 @@ var WebGLRenderer = new Class({
      * @param {HTMLCanvasElement} srcCanvas - The Canvas to create the WebGL Texture from
      * @param {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} [dstTexture] - The destination WebGLTextureWrapper to set.
      * @param {boolean} [noRepeat=false] - Should this canvas be allowed to set `REPEAT` (such as for Text objects?)
-     * @param {boolean} [flipY=false] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
+     * @param {boolean} [flipY=true] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
      *
      * @return {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} The newly created, or updated, WebGLTextureWrapper.
      */
     canvasToTexture: function (srcCanvas, dstTexture, noRepeat, flipY)
     {
         if (noRepeat === undefined) { noRepeat = false; }
-        if (flipY === undefined) { flipY = false; }
+        if (flipY === undefined) { flipY = true; }
 
         var gl = this.gl;
         var minFilter = gl.NEAREST;
@@ -2349,14 +2213,14 @@ var WebGLRenderer = new Class({
      *
      * @param {HTMLCanvasElement} srcCanvas - The Canvas to create the WebGL Texture from.
      * @param {boolean} [noRepeat=false] - Should this canvas be allowed to set `REPEAT` (such as for Text objects?)
-     * @param {boolean} [flipY=false] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
+     * @param {boolean} [flipY=true] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
      *
      * @return {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} The newly created WebGLTextureWrapper.
      */
     createCanvasTexture: function (srcCanvas, noRepeat, flipY)
     {
         if (noRepeat === undefined) { noRepeat = false; }
-        if (flipY === undefined) { flipY = false; }
+        if (flipY === undefined) { flipY = true; }
 
         return this.canvasToTexture(srcCanvas, null, noRepeat, flipY);
     },
@@ -2369,14 +2233,14 @@ var WebGLRenderer = new Class({
      *
      * @param {HTMLCanvasElement} srcCanvas - The Canvas to update the WebGL Texture from.
      * @param {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} dstTexture - The destination WebGLTextureWrapper to update.
-     * @param {boolean} [flipY=false] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
+     * @param {boolean} [flipY=true] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
      * @param {boolean} [noRepeat=false] - Should this canvas be allowed to set `REPEAT` (such as for Text objects?)
      *
      * @return {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} The updated WebGLTextureWrapper. This is the same wrapper object as `dstTexture`.
      */
     updateCanvasTexture: function (srcCanvas, dstTexture, flipY, noRepeat)
     {
-        if (flipY === undefined) { flipY = false; }
+        if (flipY === undefined) { flipY = true; }
         if (noRepeat === undefined) { noRepeat = false; }
 
         return this.canvasToTexture(srcCanvas, dstTexture, noRepeat, flipY);
@@ -2393,14 +2257,14 @@ var WebGLRenderer = new Class({
      * @param {HTMLVideoElement} srcVideo - The Video to create the WebGL Texture from
      * @param {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} [dstTexture] - The destination WebGLTextureWrapper to set.
      * @param {boolean} [noRepeat=false] - Should this canvas be allowed to set `REPEAT`?
-     * @param {boolean} [flipY=false] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
+     * @param {boolean} [flipY=true] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
      *
      * @return {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} The newly created, or updated, WebGLTextureWrapper.
      */
     videoToTexture: function (srcVideo, dstTexture, noRepeat, flipY)
     {
         if (noRepeat === undefined) { noRepeat = false; }
-        if (flipY === undefined) { flipY = false; }
+        if (flipY === undefined) { flipY = true; }
 
         var gl = this.gl;
         var minFilter = gl.NEAREST;
@@ -2444,14 +2308,14 @@ var WebGLRenderer = new Class({
      *
      * @param {HTMLVideoElement} srcVideo - The Video to create the WebGL Texture from
      * @param {boolean} [noRepeat=false] - Should this canvas be allowed to set `REPEAT`?
-     * @param {boolean} [flipY=false] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
+     * @param {boolean} [flipY=true] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
      *
      * @return {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} The newly created WebGLTextureWrapper.
      */
     createVideoTexture: function (srcVideo, noRepeat, flipY)
     {
         if (noRepeat === undefined) { noRepeat = false; }
-        if (flipY === undefined) { flipY = false; }
+        if (flipY === undefined) { flipY = true; }
 
         return this.videoToTexture(srcVideo, null, noRepeat, flipY);
     },
@@ -2464,14 +2328,14 @@ var WebGLRenderer = new Class({
      *
      * @param {HTMLVideoElement} srcVideo - The Video to update the WebGL Texture with.
      * @param {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} dstTexture - The destination WebGLTextureWrapper to update.
-     * @param {boolean} [flipY=false] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
+     * @param {boolean} [flipY=true] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
      * @param {boolean} [noRepeat=false] - Should this canvas be allowed to set `REPEAT`?
      *
      * @return {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} The updated WebGLTextureWrapper. This is the same wrapper object as `dstTexture`.
      */
     updateVideoTexture: function (srcVideo, dstTexture, flipY, noRepeat)
     {
-        if (flipY === undefined) { flipY = false; }
+        if (flipY === undefined) { flipY = true; }
         if (noRepeat === undefined) { noRepeat = false; }
 
         return this.videoToTexture(srcVideo, dstTexture, noRepeat, flipY);
@@ -2490,9 +2354,10 @@ var WebGLRenderer = new Class({
      * @param {number} width - The width of the texture.
      * @param {number} height - The height of the texture.
      * @param {boolean} [pma = true] - Should the texture be set as having premultiplied alpha?
+     * @param {boolean} [flipY = true] - Should the WebGL Texture set `UNPACK_MULTIPLY_FLIP_Y`?
      * @return {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} The newly created WebGLTextureWrapper.
      */
-    createUint8ArrayTexture: function (data, width, height, pma)
+    createUint8ArrayTexture: function (data, width, height, pma, flipY)
     {
         var gl = this.gl;
         var minFilter = gl.NEAREST;
@@ -2507,8 +2372,9 @@ var WebGLRenderer = new Class({
         }
 
         if (pma === undefined) { pma = true; }
+        if (flipY === undefined) { flipY = true; }
 
-        return this.createTexture2D(0, minFilter, magFilter, wrap, wrap, gl.RGBA, data, width, height, pma);
+        return this.createTexture2D(0, minFilter, magFilter, wrap, wrap, gl.RGBA, data, width, height, pma, false, flipY);
     },
 
     /**
@@ -2582,7 +2448,6 @@ var WebGLRenderer = new Class({
         {
             wrapper.destroy();
         };
-        ArrayEach(this.glAttribLocationWrappers, wrapperDestroy);
         ArrayEach(this.glBufferWrappers, wrapperDestroy);
         ArrayEach(this.glFramebufferWrappers, wrapperDestroy);
         ArrayEach(this.glProgramWrappers, wrapperDestroy);
@@ -2601,24 +2466,7 @@ var WebGLRenderer = new Class({
         {
             this.spector = null;
         }
-    },
-
-    /**
-     * An array of the available WebGL texture units, used to populate the uSampler uniforms.
-     *
-     * @name Phaser.Renderer.WebGL.WebGLRenderer#textureIndexes
-     * @type {number[]}
-     * @readonly
-     * @since 3.50.0
-     * @deprecated since version 3.90.0: Use `glTextureUnits.unitIndices` instead.
-     */
-    textureIndexes: {
-        get: function ()
-        {
-            return this.glTextureUnits.unitIndices;
-        }
     }
-
 });
 
 module.exports = WebGLRenderer;

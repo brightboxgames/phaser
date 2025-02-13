@@ -45,17 +45,11 @@ var ShaderRender = require('./ShaderRender');
  * a custom RenderNode instead. However, for background or special masking effects,
  * they are extremely effective.
  *
- * Note: be careful when using `gl_FragCoord` in shader code.
- * This built-in variable gives you the "window relative" coordinate
- * of the pixel being processed.
- * But this is actually relative to the framebuffer size,
- * and Phaser treats all framebuffers except the main canvas
- * as being vertically flipped.
- * This means that `gl_FragCoord.y = 0` in a shader will be the bottom of a framebuffer,
- * but the top of the canvas.
- * This means `gl_FragCoord` gives different results when it's inside a
- * framebuffer (like a Render Texture or Filter) compared to the main canvas.
- * Be aware of this restriction when writing shaders.
+ * Note: be careful when using texture coordinates in shader code.
+ * The built-in variable `gl_FragCoord` and the default uniform `outTexCoord`
+ * both use WebGL coordinates, which are `0,0` in the bottom-left.
+ * Additionally, `gl_FragCoord` says it's in "window relative" coordinates.
+ * But this is actually relative to the framebuffer size.
  *
  * @example
  * // Loading a shader from the cache (good for simple shaders)
@@ -103,7 +97,7 @@ var ShaderRender = require('./ShaderRender');
  * @param {number} [y=0] - The vertical position of this Game Object in the world.
  * @param {number} [width=128] - The width of the Game Object.
  * @param {number} [height=128] - The height of the Game Object.
- * @param {string[]|Phaser.Textures.Texture[]} [textures] - The textures that the shader uses, if any.
+ * @param {string[]|Phaser.Textures.Texture[]} [textures] - The textures that the shader uses, if any. If you intend to define the textures later, use `'__DEFAULT'` as a placeholder, to avoid initialization errors.
  */
 var Shader = new Class({
     Extends: GameObject,
@@ -210,43 +204,43 @@ var Shader = new Class({
 
         /**
          * The top-left texture coordinate of the shader.
-         * This is set to 0,0 by default.
+         * This is set to 0,1 by default. It uses WebGL texture coordinates.
          *
          * @name Phaser.GameObjects.Shader#textureCoordinateTopLeft
          * @type {Phaser.Math.Vector2}
          * @since 4.0.0
          */
-        this.textureCoordinateTopLeft = new Vector2(0, 0);
+        this.textureCoordinateTopLeft = new Vector2(0, 1);
 
         /**
          * The top-right texture coordinate of the shader.
-         * This is set to 1,0 by default.
+         * This is set to 1,1 by default. It uses WebGL texture coordinates.
          *
          * @name Phaser.GameObjects.Shader#textureCoordinateTopRight
          * @type {Phaser.Math.Vector2}
          * @since 4.0.0
          */
-        this.textureCoordinateTopRight = new Vector2(1, 0);
+        this.textureCoordinateTopRight = new Vector2(1, 1);
 
         /**
          * The bottom-left texture coordinate of the shader.
-         * This is set to 0,1 by default.
+         * This is set to 0,0 by default. It uses WebGL texture coordinates.
          *
          * @name Phaser.GameObjects.Shader#textureCoordinateBottomLeft
          * @type {Phaser.Math.Vector2}
          * @since 4.0.0
          */
-        this.textureCoordinateBottomLeft = new Vector2(0, 1);
+        this.textureCoordinateBottomLeft = new Vector2(0, 0);
 
         /**
          * The bottom-right texture coordinate of the shader.
-         * This is set to 1,1 by default.
+         * This is set to 1,0 by default. It uses WebGL texture coordinates.
          *
          * @name Phaser.GameObjects.Shader#textureCoordinateBottomRight
          * @type {Phaser.Math.Vector2}
          * @since 4.0.0
          */
-        this.textureCoordinateBottomRight = new Vector2(1, 1);
+        this.textureCoordinateBottomRight = new Vector2(1, 0);
 
         this.setTextures(textures);
         this.setPosition(x, y);
@@ -282,6 +276,8 @@ var Shader = new Class({
      * where N is `textures.length - 1`.
      * You must set the uniforms in your shader to match these texture units.
      *
+     * Calling this method will replace the existing textures array with the new one.
+     *
      * @example
      * // In the shader source, use the `sampler2D` type.
      * sampler2D uMainSampler;
@@ -304,6 +300,8 @@ var Shader = new Class({
     setTextures: function (textures)
     {
         if (textures === undefined) { textures = []; }
+
+        this.textures.length = 0;
 
         for (var i = 0; i < textures.length; i++)
         {
@@ -348,6 +346,18 @@ var Shader = new Class({
      * By default it will create a single base texture. You can add frames to the texture
      * by using the `Texture.add` method. After doing this, you can then allow Game Objects
      * to use a specific frame from a Render Texture.
+     *
+     * If you want to update a texture only sporadically, don't use this method.
+     * Instead, use a DynamicTexture:
+     *
+     * ```javascript
+     * var shader = this.add.shader('myShader', x, y, width, height);
+     *
+     * var dynamic = this.textures.addDynamicTexture('myTexture', shader.width, shader.height);
+     * 
+     * // To update the texture:
+     * dynamic.clear().draw(shader).render();
+     * ```
      *
      * @method Phaser.GameObjects.Shader#setRenderToTexture
      * @since 3.19.0
@@ -442,6 +452,7 @@ var Shader = new Class({
      * and are commonly used to drive generative output.
      *
      * By default, the shader uses the whole texture, the range 0-1.
+     * The coordinates are in WebGL texture space, which is 0,0 in the bottom-left.
      * This method allows you to specify a region of the texture to use,
      * or even go outside the 0-1 bounds.
      * This can be useful if you want to use a single frame from a texture,
@@ -460,13 +471,13 @@ var Shader = new Class({
      * @method Phaser.GameObjects.Shader#setTextureCoordinates
      * @since 4.0.0
      * @param {number} [topLeftX=0] - The top-left x coordinate of the texture.
-     * @param {number} [topLeftY=0] - The top-left y coordinate of the texture.
+     * @param {number} [topLeftY=1] - The top-left y coordinate of the texture.
      * @param {number} [topRightX=1] - The top-right x coordinate of the texture.
-     * @param {number} [topRightY=0] - The top-right y coordinate of the texture.
+     * @param {number} [topRightY=1] - The top-right y coordinate of the texture.
      * @param {number} [bottomLeftX=0] - The bottom-left x coordinate of the texture.
-     * @param {number} [bottomLeftY=1] - The bottom-left y coordinate of the texture.
+     * @param {number} [bottomLeftY=0] - The bottom-left y coordinate of the texture.
      * @param {number} [bottomRightX=1] - The bottom-right x coordinate of the texture.
-     * @param {number} [bottomRightY=1] - The bottom-right y coordinate of the texture.
+     * @param {number} [bottomRightY=0] - The bottom-right y coordinate of the texture.
      * @return {this} This Shader instance
      */
     setTextureCoordinates: function (
@@ -477,13 +488,13 @@ var Shader = new Class({
     )
     {
         if (topLeftX === undefined) { topLeftX = 0; }
-        if (topLeftY === undefined) { topLeftY = 0; }
+        if (topLeftY === undefined) { topLeftY = 1; }
         if (topRightX === undefined) { topRightX = 1; }
-        if (topRightY === undefined) { topRightY = 0; }
+        if (topRightY === undefined) { topRightY = 1; }
         if (bottomLeftX === undefined) { bottomLeftX = 0; }
-        if (bottomLeftY === undefined) { bottomLeftY = 1; }
+        if (bottomLeftY === undefined) { bottomLeftY = 0; }
         if (bottomRightX === undefined) { bottomRightX = 1; }
-        if (bottomRightY === undefined) { bottomRightY = 1; }
+        if (bottomRightY === undefined) { bottomRightY = 0; }
 
         this.textureCoordinateTopLeft.set(topLeftX, topLeftY);
         this.textureCoordinateTopRight.set(topRightX, topRightY);

@@ -79,6 +79,7 @@ var Layer = new Class({
         Components.AlphaSingle,
         Components.BlendMode,
         Components.Depth,
+        Components.Filters,
         Components.Mask,
         Components.RenderSteps, // This does not extend GameObject so it must mixin RenderSteps here.
         Components.Visible,
@@ -306,6 +307,12 @@ var Layer = new Class({
         if (children)
         {
             this.add(children);
+        }
+
+        // Initialize RenderSteps mixin.
+        if (this.addRenderStep)
+        {
+            this.addRenderStep(this.renderWebGL);
         }
 
         //  Tell the Scene to re-sort the children
@@ -962,6 +969,13 @@ var Layer = new Class({
             this.data.destroy();
 
             this.data = undefined;
+        }
+
+        if (this.filterCamera)
+        {
+            this.filterCamera.destroy();
+
+            this.filterCamera = undefined;
         }
 
         this.active = false;

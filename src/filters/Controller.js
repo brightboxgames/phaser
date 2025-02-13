@@ -13,6 +13,10 @@ var Rectangle = require('../geom/rectangle/Rectangle');
  *
  * You should not normally create an instance of this class directly, but instead use one of the built-in filters that extend it.
  *
+ * You should not use a Controller for more than one Camera.
+ * Create a new instance for each Camera that you wish to apply the filter to.
+ * If you share Controllers, and destroy one owner, the Controller will be destroyed.
+ *
  * @class Controller
  * @memberof Phaser.Filters
  * @constructor
@@ -58,7 +62,7 @@ var Controller = new Class({
          *
          * @name Phaser.Filters.Controller#paddingOverride
          * @type {Phaser.Geom.Rectangle}
-         * @since 3.90
+         * @since 4.0.0
          */
         this.paddingOverride = new Rectangle();
 
@@ -89,6 +93,21 @@ var Controller = new Class({
          * @readonly
          */
         this.allowBaseDraw = true;
+
+        /**
+         * Whether this filter controller will be destroyed when the FilterList
+         * that owns it is destroyed. If you enable this, you must ensure that
+         * you clean up the filter controller at an appropriate time.
+         * This allows you to reuse a controller for multiple objects;
+         * this is not recommended unless you know what you're doing.
+         * It tends to work best with external filters.
+         *
+         * @name Phaser.Filters.Controller#ignoreDestroy
+         * @type {boolean}
+         * @since 4.0.0
+         * @default false
+         */
+        this.ignoreDestroy = false;
     },
 
     /**

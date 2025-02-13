@@ -905,7 +905,7 @@ var TransformMatrix = new Class({
 
     /**
      * Performs the 8 calculations required to create the vertices of
-     * a quad based on this matrix and the given x/y/xw/yh values.
+     * a quad based on this matrix and the given vertex coordinates.
      *
      * The result is stored in `TransformMatrix.quad`, which is returned
      * from this method.
@@ -913,18 +913,16 @@ var TransformMatrix = new Class({
      * @method Phaser.GameObjects.Components.TransformMatrix#setQuad
      * @since 3.60.0
      *
-     * @param {number} x - The x value.
-     * @param {number} y - The y value.
-     * @param {number} xw - The xw value.
-     * @param {number} yh - The yh value.
-     * @param {boolean} [roundPixels=false] - Pass the results via Math.round?
+     * @param {number} x - The x value of the top-left vertex of the quad.
+     * @param {number} y - The y value of the top-left vertex of the quad.
+     * @param {number} xw - The x value of the bottom-right vertex of the quad. This is the x + width.
+     * @param {number} yh - The y value of the bottom-right vertex of the quad. This is the y + height.
      * @param {Float32Array} [quad] - Optional Float32Array to store the results in. Otherwises uses the local quad array.
      *
      * @return {Float32Array} The quad Float32Array.
      */
-    setQuad: function (x, y, xw, yh, roundPixels, quad)
+    setQuad: function (x, y, xw, yh, quad)
     {
-        if (roundPixels === undefined) { roundPixels = false; }
         if (quad === undefined) { quad = this.quad; }
 
         var matrix = this.matrix;
@@ -936,34 +934,17 @@ var TransformMatrix = new Class({
         var e = matrix[4];
         var f = matrix[5];
 
-        if (roundPixels)
-        {
-            quad[0] = Math.round(x * a + y * c + e);
-            quad[1] = Math.round(x * b + y * d + f);
+        quad[0] = x * a + y * c + e;
+        quad[1] = x * b + y * d + f;
 
-            quad[2] = Math.round(x * a + yh * c + e);
-            quad[3] = Math.round(x * b + yh * d + f);
+        quad[2] = x * a + yh * c + e;
+        quad[3] = x * b + yh * d + f;
 
-            quad[4] = Math.round(xw * a + yh * c + e);
-            quad[5] = Math.round(xw * b + yh * d + f);
+        quad[4] = xw * a + yh * c + e;
+        quad[5] = xw * b + yh * d + f;
 
-            quad[6] = Math.round(xw * a + y * c + e);
-            quad[7] = Math.round(xw * b + y * d + f);
-        }
-        else
-        {
-            quad[0] = x * a + y * c + e;
-            quad[1] = x * b + y * d + f;
-
-            quad[2] = x * a + yh * c + e;
-            quad[3] = x * b + yh * d + f;
-
-            quad[4] = xw * a + yh * c + e;
-            quad[5] = xw * b + yh * d + f;
-
-            quad[6] = xw * a + y * c + e;
-            quad[7] = xw * b + y * d + f;
-        }
+        quad[6] = xw * a + y * c + e;
+        quad[7] = xw * b + y * d + f;
 
         return quad;
     },
