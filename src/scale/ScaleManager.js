@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -1224,6 +1224,11 @@ var ScaleManager = new Class({
         else if (autoCenter === CONST.CENTER.CENTER_VERTICALLY)
         {
             offsetX = 0;
+        }
+        else
+        {
+            offsetX = 0;
+            offsetY = 0;
         }
 
         style.marginLeft = offsetX + 'px';
