@@ -160,10 +160,15 @@ var Camera = new Class({
         {
             var index, filter, padding, renderNode, tint;
 
+            // Determine whether to use round vertex coordinates.
+            // Keyword: #OnlyTranslate
+            var cmm = camera.matrix.matrix;
+            var roundPixels = camera.roundPixels && (cmm[0] === 1 && cmm[1] === 0 && cmm[2] === 0 && cmm[3] === 1);
+
             // Set up render options.
             var renderOptions = {
                 smoothPixelArt: manager.renderer.game.config.smoothPixelArt,
-                roundPixels: camera.roundPixels
+                roundPixels: roundPixels
             };
 
             // Draw internal filters.
@@ -284,7 +289,7 @@ var Camera = new Class({
                     0, 1, 1, -1,
 
                     // Tint color:
-                    tint,
+                    false,
 
                     // Tint colors in order TL, BL, TR, BR:
                     tint, tint, tint, tint,
@@ -370,7 +375,7 @@ var Camera = new Class({
                         0, 0, 1, 1,
 
                         // Tint color:
-                        tint,
+                        false,
 
                         // Tint colors in order TL, BL, TR, BR:
                         tint, tint, tint, tint,
