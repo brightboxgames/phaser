@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -68,7 +68,7 @@ var Camera = new Class({
          * See {@link Phaser.GameObjects.Components.FilterList} for more information.
          *
          * @name Phaser.Cameras.Scene2D.Camera#filters
-         * @type {{ internal: Phaser.GameObjects.Components.FilterList, external: Phaser.GameObjects.Components.FilterList }}
+         * @type {Phaser.Types.GameObjects.FiltersInternalExternal}
          * @since 4.0.0
          */
         this.filters = {
@@ -442,27 +442,26 @@ var Camera = new Class({
     },
 
     /**
-     * This effect will rotate the Camera so that the viewport finishes at the given angle in radians,
-     * over the duration and with the ease specified.
+     * Rotate the Camera to the given angle over the duration and with the ease specified.
      *
      * @method Phaser.Cameras.Scene2D.Camera#rotateTo
      * @since 3.23.0
      *
-     * @param {number} radians - The destination angle in radians to rotate the Camera viewport to. If the angle is positive then the rotation is clockwise else anticlockwise
-     * @param {boolean} [shortestPath=false] - If shortest path is set to true the camera will rotate in the quickest direction clockwise or anti-clockwise.
+     * @param {number} angle - The destination angle in radians to rotate the Camera view to.
+     * @param {boolean} [shortestPath=false] - If true, take the shortest distance to the destination. This adjusts the destination angle to be within one half turn of the start angle.
      * @param {number} [duration=1000] - The duration of the effect in milliseconds.
-     * @param {(string|function)} [ease='Linear'] - The ease to use for the rotation. Can be any of the Phaser Easing constants or a custom function.
+     * @param {(string|function)} [ease='Linear'] - The ease to use. Can be any of the Phaser Easing constants or a custom function.
      * @param {boolean} [force=false] - Force the rotation effect to start immediately, even if already running.
-     * @param {CameraRotateCallback} [callback] - This callback will be invoked every frame for the duration of the effect.
-     * It is sent four arguments: A reference to the camera, a progress amount between 0 and 1 indicating how complete the effect is,
-     * the current camera rotation angle in radians.
+     * @param {Phaser.Types.Cameras.Scene2D.CameraRotateCallback} [callback] - This callback will be invoked every frame for the duration of the effect.
+     * It is sent three arguments: A reference to the camera, a progress amount between 0 and 1 indicating how complete the effect is,
+     * and the current camera rotation.
      * @param {any} [context] - The context in which the callback is invoked. Defaults to the Scene to which the Camera belongs.
      *
      * @return {Phaser.Cameras.Scene2D.Camera} This Camera instance.
      */
-    rotateTo: function (radians, shortestPath, duration, ease, force, callback, context)
+    rotateTo: function (angle, shortestPath, duration, ease, force, callback, context)
     {
-        return this.rotateToEffect.start(radians, shortestPath, duration, ease, force, callback, context);
+        return this.rotateToEffect.start(angle, shortestPath, duration, ease, force, callback, context);
     },
 
     /**
@@ -508,7 +507,8 @@ var Camera = new Class({
 
         var zoomX = this.zoomX;
         var zoomY = this.zoomY;
-        var matrix = this.matrix;
+
+        this.renderRoundPixels = (this.roundPixels && Number.isInteger(zoomX) && Number.isInteger(zoomY));
 
         var originX = width * this.originX;
         var originY = height * this.originY;
@@ -587,15 +587,50 @@ var Camera = new Class({
 
         this.worldView.setTo(vwx, vwy, displayWidth, displayHeight);
 
-        matrix.applyITRS(this.x + originX, this.y + originY, this.rotation, zoomX, zoomY);
+        var matrix = this.matrix;
+        var matrixExternal = this.matrixExternal;
 
-        matrix.translate(-originX, -originY);
+        // Apply view transforms in order IRST.
+        matrix.applyITRS(originX, originY, this.rotation, zoomX, zoomY);
+        matrix.translate(-sx - originX, -sy - originY);
+
+        matrixExternal.applyITRS(this.x, this.y, 0, 1, 1);
 
         this.shakeEffect.preRender();
+
+        matrixExternal.multiply(matrix, this.matrixCombined);
 
         if (emitFollowEvent)
         {
             this.emit(Events.FOLLOW_UPDATE, this, follow);
+        }
+    },
+
+    /**
+     * Returns the view matrix of the camera. This is used internally.
+     *
+     * This is `matrix` if the camera is intended to render to a framebuffer,
+     * and `matrixCombined` otherwise.
+     *
+     * @method Phaser.Cameras.Scene2D.Camera#getViewMatrix
+     * @webglonly
+     * @since 4.0.0
+     * @param {boolean} [forceComposite=false] - If `true`, the view matrix will always be `matrix`. This is typically used when rendering to a framebuffer, so the external matrix is irrelevant.
+     * @returns {Phaser.GameObjects.Components.TransformMatrix} The view matrix of the camera.
+     */
+    getViewMatrix: function (forceComposite)
+    {
+        if (
+            forceComposite || this.forceComposite ||
+            this.filters.external.length > 0 ||
+            this.filters.internal.length > 0
+        )
+        {
+            return this.matrix;
+        }
+        else
+        {
+            return this.matrixCombined;
         }
     },
 

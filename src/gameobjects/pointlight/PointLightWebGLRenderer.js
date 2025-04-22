@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -25,7 +25,7 @@ var PointLightWebGLRenderer = function (renderer, src, drawingContext, parentMat
     var camera = drawingContext.camera;
     camera.addToRenderList(src);
 
-    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix).calc;
+    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix, !drawingContext.useCanvas).calc;
 
     var width = src.width;
     var height = src.height;

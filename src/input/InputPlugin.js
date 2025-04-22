@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -933,7 +933,7 @@ var InputPlugin = new Class({
 
         if (gameObject.input)
         {
-            //  If it is already has an InteractiveObject then just enable it and return
+            //  If it already has an InteractiveObject then just enable it and return
             gameObject.input.enabled = true;
         }
         else

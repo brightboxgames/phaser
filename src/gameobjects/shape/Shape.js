@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -208,6 +208,12 @@ var Shape = new Class({
          * @since 3.0.0
          */
         this.height = 0;
+
+        if (this.enableFilters)
+        {
+            // Prevent Shape stroke from being cut off in filters.
+            this.filtersFocusContext = true;
+        }
 
         this.initRenderNodes(this._defaultRenderNodesMap);
     },

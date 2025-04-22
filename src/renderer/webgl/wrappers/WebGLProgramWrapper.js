@@ -1,11 +1,27 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
 var Map = require('../../../structs/Map');
 var Class = require('../../../utils/Class');
+
+function isDifferent (a, b)
+{
+    if (a === b)
+    {
+        return false;
+    }
+    if (Number.isNaN(a) || a === undefined)
+    {
+        if (Number.isNaN(b) || b === undefined)
+        {
+            return false;
+        }
+    }
+    return true;
+}
 
 /**
  * @classdesc
@@ -463,7 +479,7 @@ var WebGLProgramWrapper = new Class({
             var different = false;
             for (var i = 0; i < uniformValue.length; i++)
             {
-                if (uniformValue[i] !== value[i])
+                if (isDifferent(uniformValue[i], value[i]))
                 {
                     different = true;
                     uniformValue[i] = value[i];
@@ -473,7 +489,7 @@ var WebGLProgramWrapper = new Class({
         }
         else
         {
-            if (uniformValue === value) { return; }
+            if (!isDifferent(uniformValue, value)) { return; }
             uniformValue = value;
             uniform.value = value;
         }

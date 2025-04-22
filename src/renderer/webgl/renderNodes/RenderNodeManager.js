@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -190,6 +190,14 @@ var RenderNodeManager = new Class({
             YieldContext: YieldContext
         };
 
+        Object.entries(game.config.renderNodes).forEach(function (entry)
+        {
+            var name = entry[0];
+            var constructor = entry[1];
+
+            this.addNodeConstructor(name, constructor);
+        }, this);
+
         /**
          * The RenderNode which is currently being filled.
          * This is stored so that it can be completed when another type of
@@ -247,9 +255,9 @@ var RenderNodeManager = new Class({
     /**
      * Add a node to the manager.
      *
-     * @method Phaser.Renderer.WebGL.RenderNodes.RenderNodeManager#addStep
+     * @method Phaser.Renderer.WebGL.RenderNodes.RenderNodeManager#addNode
      * @since 4.0.0
-     * @param {string} name - The name of the step.
+     * @param {string} name - The name of the node.
      * @param {Phaser.Renderer.WebGL.RenderNodes.RenderNode} node - The node to add.
      * @throws {Error} Will throw an error if the node already exists.
      */

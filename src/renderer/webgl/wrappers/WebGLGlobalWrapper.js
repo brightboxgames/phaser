@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -664,10 +664,6 @@ var WebGLGlobalWrapper = new Class({
     /**
      * Updates the scissor box state.
      *
-     * This method uses the current framebuffer's height to convert the
-     * Y coordinate, so ensure that it is called after setting the
-     * framebuffer. In a regular update, this happens naturally.
-     *
      * @method Phaser.Renderer.WebGL.Wrappers.WebGLGlobalWrapper#updateScissorBox
      * @since 4.0.0
      * @param {Phaser.Types.Renderer.WebGL.WebGLGlobalParameters} state - The state to set.
@@ -692,17 +688,9 @@ var WebGLGlobalWrapper = new Class({
         }
         if (different || force)
         {
-            // Convert Y coordinate, as WebGL uses bottom-left origin.
-            var renderer = this.renderer;
-            var bufferHeight = renderer.drawingBufferHeight;
-            var currentFramebuffer = this.state.bindings.framebuffer;
-            if (currentFramebuffer && !currentFramebuffer.useCanvas)
-            {
-                bufferHeight = currentFramebuffer.height;
-            }
-            renderer.gl.scissor(
+            this.renderer.gl.scissor(
                 x,
-                bufferHeight - y - height,
+                y,
                 width,
                 height
             );

@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -27,7 +27,7 @@ var PolygonWebGLRenderer = function (renderer, src, drawingContext, parentMatrix
     var camera = drawingContext.camera;
     camera.addToRenderList(src);
 
-    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix).calc;
+    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix, !drawingContext.useCanvas).calc;
 
     var dx = src._displayOriginX;
     var dy = src._displayOriginY;

@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -13,6 +13,7 @@ module.exports = {
     DRAW: 4,
     SET_ERASE: 5,
     PRESERVE: 6,
-    CALLBACK: 7
+    CALLBACK: 7,
+    CAPTURE: 8
 
 };

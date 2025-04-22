@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -54,7 +54,7 @@ var DynamicBitmapTextWebGLRenderer = function (renderer, src, drawingContext, pa
 
     var submitterNode = src.customRenderNodes.Submitter || src.defaultRenderNodes.Submitter;
 
-    var result = GetCalcMatrix(src, camera, parentMatrix);
+    var result = GetCalcMatrix(src, camera, parentMatrix, !drawingContext.useCanvas);
 
     var spriteMatrix = result.sprite;
     var calcMatrix = result.calc;
@@ -172,8 +172,9 @@ var DynamicBitmapTextWebGLRenderer = function (renderer, src, drawingContext, pa
 
         if (lastGlyph !== null)
         {
-            var kerningOffset = glyph.kerning[lastCharCode];
-            x += (kerningOffset !== undefined) ? kerningOffset : 0;
+            var kerningOffset = glyph.kerning[lastCharCode] || 0;
+            x += kerningOffset;
+            xAdvance += kerningOffset;
         }
 
         xAdvance += glyph.xAdvance + letterSpacing;

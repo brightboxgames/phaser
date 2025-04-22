@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -42,21 +42,19 @@ var BlitterWebGLRenderer = function (renderer, src, drawingContext, parentMatrix
 
     camera.addToRenderList(src);
 
-    var cameraScrollX = camera.scrollX * src.scrollFactorX;
-    var cameraScrollY = camera.scrollY * src.scrollFactorY;
-
-    var calcMatrix = tempMatrix.copyFrom(camera.matrix);
+    var calcMatrix = tempMatrix.copyWithScrollFactorFrom(
+        camera.getViewMatrix(!drawingContext.useCanvas),
+        camera.scrollX, camera.scrollY,
+        src.scrollFactorX, src.scrollFactorY
+    );
 
     if (parentMatrix)
     {
-        calcMatrix.multiplyWithOffset(parentMatrix, -cameraScrollX, -cameraScrollY);
-
-        cameraScrollX = 0;
-        cameraScrollY = 0;
+        calcMatrix.multiply(parentMatrix);
     }
 
-    var blitterX = src.x - cameraScrollX;
-    var blitterY = src.y - cameraScrollY;
+    var blitterX = src.x;
+    var blitterY = src.y;
 
     var customRenderNodes = src.customRenderNodes;
     var defaultRenderNodes = src.defaultRenderNodes;

@@ -1,16 +1,22 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
 var TransformMatrix = require('./components/TransformMatrix');
 
-var tempMatrix1 = new TransformMatrix();
-var tempMatrix2 = new TransformMatrix();
-var tempMatrix3 = new TransformMatrix();
+var camMatrix = new TransformMatrix();
+var spriteMatrix = new TransformMatrix();
+var calcMatrix = new TransformMatrix();
+var camExternalMatrix = new TransformMatrix();
 
-var result = { camera: tempMatrix1, sprite: tempMatrix2, calc: tempMatrix3 };
+var result = {
+    camera: camMatrix,
+    sprite: spriteMatrix,
+    calc: calcMatrix,
+    cameraExternal: camExternalMatrix
+};
 
 /**
  * Calculates the Transform Matrix of the given Game Object and Camera, factoring in
@@ -28,32 +34,37 @@ var result = { camera: tempMatrix1, sprite: tempMatrix2, calc: tempMatrix3 };
  * @param {Phaser.GameObjects.GameObject} src - The Game Object to calculate the transform matrix for.
  * @param {Phaser.Cameras.Scene2D.Camera} camera - The camera being used to render the Game Object.
  * @param {Phaser.GameObjects.Components.TransformMatrix} [parentMatrix] - The transform matrix of the parent container, if any.
+ * @param {boolean} [ignoreCameraPosition=false] - Should the camera's translation be ignored? This is what moves a camera around on the screen, but it should be ignored when the camera is being rendered to a framebuffer.
  *
  * @return {Phaser.Types.GameObjects.GetCalcMatrixResults} The results object containing the updated transform matrices.
  */
-var GetCalcMatrix = function (src, camera, parentMatrix)
+var GetCalcMatrix = function (src, camera, parentMatrix, ignoreCameraPosition)
 {
-    var camMatrix = tempMatrix1;
-    var spriteMatrix = tempMatrix2;
-    var calcMatrix = tempMatrix3;
-
-    spriteMatrix.applyITRS(src.x, src.y, src.rotation, src.scaleX, src.scaleY);
-
-    camMatrix.copyFrom(camera.matrix);
-
-    if (parentMatrix)
+    if (ignoreCameraPosition)
     {
-        //  Multiply the camera by the parent matrix
-        camMatrix.multiplyWithOffset(parentMatrix, -camera.scrollX * src.scrollFactorX, -camera.scrollY * src.scrollFactorY);
+        camExternalMatrix.loadIdentity();
     }
     else
     {
-        spriteMatrix.e -= camera.scrollX * src.scrollFactorX;
-        spriteMatrix.f -= camera.scrollY * src.scrollFactorY;
+        camExternalMatrix.copyFrom(camera.matrixExternal);
     }
 
-    //  Multiply by the Sprite matrix, store result in calcMatrix
-    camMatrix.multiply(spriteMatrix, calcMatrix);
+    camMatrix.copyWithScrollFactorFrom(
+        ignoreCameraPosition ? camera.matrix : camera.matrixCombined,
+        camera.scrollX, camera.scrollY,
+        src.scrollFactorX, src.scrollFactorY
+    );
+
+    calcMatrix.copyFrom(camMatrix);
+
+    if (parentMatrix)
+    {
+        calcMatrix.multiply(parentMatrix);
+    }
+
+    spriteMatrix.applyITRS(src.x, src.y, src.rotation, src.scaleX, src.scaleY);
+
+    calcMatrix.multiply(spriteMatrix);
 
     return result;
 };

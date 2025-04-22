@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -14,6 +14,10 @@ var TilemapLayerBase = require('./TilemapLayerBase');
  * @classdesc
  * A Tilemap Layer is a Game Object that renders LayerData from a Tilemap when used in combination
  * with one, or more, Tilesets.
+ * 
+ * A TilemapLayer can be placed inside a Container, but its physics
+ * will work as though it was placed directly in the world.
+ * This is rarely what you want.
  *
  * @class TilemapLayer
  * @extends Phaser.Tilemaps.TilemapLayerBase

@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -65,7 +65,9 @@ var StableSort = require('../../utils/array/StableSort');
  * @extends Phaser.GameObjects.Components.AlphaSingle
  * @extends Phaser.GameObjects.Components.BlendMode
  * @extends Phaser.GameObjects.Components.Depth
+ * @extends Phaser.GameObjects.Components.Filters
  * @extends Phaser.GameObjects.Components.Mask
+ * @extends Phaser.GameObjects.Components.RenderSteps
  * @extends Phaser.GameObjects.Components.Visible
  *
  * @param {Phaser.Scene} scene - The Scene to which this Game Object belongs. A Game Object can only belong to one Scene at a time.
@@ -916,6 +918,38 @@ var Layer = new Class({
         }
 
         return this;
+    },
+
+    /**
+     * Returns a reference to the underlying display list _array_ that contains this Game Object,
+     * which will be either the Scene's Display List or the internal list belonging
+     * to its parent Container, if it has one.
+     * 
+     * If this Game Object is not on a display list or in a container, it will return `null`.
+     * 
+     * You should be very careful with this method, and understand that it returns a direct reference to the
+     * internal array used by the Display List. Mutating this array directly can cause all kinds of subtle
+     * and difficult to debug issues in your game.
+     *
+     * @method Phaser.GameObjects.Layer#getDisplayList
+     * @since 3.88.0
+     *
+     * @return {?Phaser.GameObjects.GameObject[]} The internal Display List array of Game Objects, or `null`.
+     */
+    getDisplayList: function ()
+    {
+        var list = null;
+
+        if (this.parentContainer)
+        {
+            list = this.parentContainer.list;
+        }
+        else if (this.displayList)
+        {
+            list = this.displayList.list;
+        }
+
+        return list;
     },
 
     /**

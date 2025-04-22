@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -228,12 +228,8 @@ var SubmitterSpriteGPULayer = new Class({
                     size: 4
                 },
                 {
-                    name: 'inOriginAndTintFill',
-                    size: 3
-                },
-                {
-                    name: 'inScrollFactor',
-                    size: 2
+                    name: 'inAlpha',
+                    size: 4
                 },
                 {
                     name: 'inFrame',
@@ -268,8 +264,12 @@ var SubmitterSpriteGPULayer = new Class({
                     normalized: true
                 },
                 {
-                    name: 'inAlpha',
+                    name: 'inOriginAndTintFillAndCreationTime',
                     size: 4
+                },
+                {
+                    name: 'inScrollFactor',
+                    size: 2
                 }
             ]
         },
@@ -394,7 +394,7 @@ var SubmitterSpriteGPULayer = new Class({
             drawingContext.renderer.projectionMatrix.val
         );
 
-        var cm = camera.matrix;
+        var cm = camera.matrixCombined;
         programManager.setUniform(
             'uViewMatrix',
             [
@@ -548,7 +548,7 @@ var SubmitterSpriteGPULayer = new Class({
             }
 
             if (
-                segments === 0xffffffff ||
+                segments === layer.MAX_BUFFER_UPDATE_SEGMENTS_FULL ||
                 memberCount <= layer.bufferUpdateSegmentSize ||
                 occupiedSegmentsAllUpdated
             )

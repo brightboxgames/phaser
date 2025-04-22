@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      None
  */
 
@@ -437,10 +437,12 @@ var SubmitterTilemapGPULayer = new Class({
      * @since 4.0.0
      * @param {Phaser.Renderer.WebGL.DrawingContext} drawingContext - The current drawing context.
      * @param {Phaser.Tilemaps.TilemapGPULayer} tilemapLayer - The TilemapGPULayer being rendered.
+     * @param {Phaser.GameObjects.Components.TransformMatrix} [parentMatrix] - The parent matrix describing the game object's context.
      */
     run: function (
         drawingContext,
-        tilemapLayer
+        tilemapLayer,
+        parentMatrix
     )
     {
         var manager = this.manager;
@@ -461,12 +463,21 @@ var SubmitterTilemapGPULayer = new Class({
         var width = tilemapLayer.width;
         var height = tilemapLayer.height;
 
-        spriteMatrix.applyITRS(x, y, 0, tilemapLayer.scaleX, tilemapLayer.scaleY);
-        spriteMatrix.e -= camera.scrollX * tilemapLayer.scrollFactorX;
-        spriteMatrix.f -= camera.scrollY * tilemapLayer.scrollFactorY;
+        calcMatrix.copyWithScrollFactorFrom(
+            camera.matrix,
+            camera.scrollX, camera.scrollY,
+            tilemapLayer.scrollFactorX, tilemapLayer.scrollFactorY
+        );
 
-        // Multiply by the Sprite matrix, store result in calcMatrix
-        camera.matrix.multiply(spriteMatrix, calcMatrix);
+        if (parentMatrix)
+        {
+            calcMatrix.multiply(parentMatrix);
+        }
+
+        spriteMatrix.applyITRS(x, y, 0, tilemapLayer.scaleX, tilemapLayer.scaleY);
+
+        // Multiply by the Sprite matrix
+        calcMatrix.multiply(spriteMatrix);
 
         // Compute output quad.
         calcMatrix.setQuad(

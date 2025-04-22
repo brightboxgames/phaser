@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -91,6 +91,7 @@ var DynamicTextureHandler = new Class({
         var eraseContext = null;
         var preserveBuffer = false;
         var currentContext = drawingContext;
+        var gl = renderer.gl;
 
         for (var index = 0; index < commandBufferLength; index++)
         {
@@ -100,10 +101,22 @@ var DynamicTextureHandler = new Class({
             {
                 case DynamicTextureCommands.CLEAR:
                 {
-                    var gl = renderer.gl;
-                    currentContext.clear(
+                    x = commandBuffer[++index];
+                    y = commandBuffer[++index];
+                    width = commandBuffer[++index];
+                    height = commandBuffer[++index];
+
+                    var clearContext = currentContext.getClone();
+                    clearContext.setScissorEnable(true);
+                    clearContext.setScissorBox(x, y, width, height);
+                    clearContext.use();
+
+                    clearContext.clear(
                         gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT
                     );
+
+                    clearContext.release();
+
                     break;
                 }
 
@@ -206,13 +219,13 @@ var DynamicTextureHandler = new Class({
                     if (x !== undefined)
                     {
                         var prevX = object.x;
-                        object.x = x;
+                        object.x += x;
                     }
 
                     if (y !== undefined)
                     {
                         var prevY = object.y;
-                        object.y = y;
+                        object.y += y;
                     }
 
                     currentContext = this._draw(renderer, object, currentContext, drawingContext, eraseContext);
@@ -268,6 +281,33 @@ var DynamicTextureHandler = new Class({
                     callback();
                     break;
                 }
+
+                case DynamicTextureCommands.CAPTURE:
+                {
+                    object = commandBuffer[++index];
+                    var config = commandBuffer[++index];
+
+                    var cacheConfig = dynamicTexture.startCapture(object, config);
+
+                    // Handle custom capture camera.
+                    var viewContext = currentContext;
+                    if (config.camera)
+                    {
+                        viewContext = viewContext.getClone();
+                        viewContext.setCamera(config.camera);
+                        viewContext.use();
+                    }
+
+                    this._draw(renderer, object, viewContext, drawingContext, eraseContext, cacheConfig.transform);
+                    dynamicTexture.finishCapture(object, cacheConfig);
+
+                    if (config.camera)
+                    {
+                        viewContext.release();
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -291,14 +331,17 @@ var DynamicTextureHandler = new Class({
      * @method Phaser.Renderer.WebGL.RenderNodes.DynamicTextureHandler#_draw
      * @private
      * @since 4.0.0
+     *
      * @param {Phaser.Renderer.WebGL.WebGLRenderer} renderer - The WebGLRenderer.
      * @param {Phaser.GameObjects.GameObject} object - The object to draw.
      * @param {Phaser.Renderer.WebGL.DrawingContext} currentContext - The current drawing context.
      * @param {Phaser.Renderer.WebGL.DrawingContext} drawingContext - The base drawing context in use.
      * @param {Phaser.Renderer.WebGL.DrawingContext} eraseContext - The erase drawing context.
+     * @param {Phaser.GameObjects.Components.TransformMatrix} [parentMatrix] - The parent matrix, if any.
+     *
      * @return {Phaser.Renderer.WebGL.DrawingContext} The new current drawing context.
      */
-    _draw: function (renderer, object, currentContext, drawingContext, eraseContext)
+    _draw: function (renderer, object, currentContext, drawingContext, eraseContext, parentMatrix)
     {
         // Handle blend mode.
         if (
@@ -324,7 +367,7 @@ var DynamicTextureHandler = new Class({
             currentContext.use();
         }
 
-        object.renderWebGLStep(renderer, object, currentContext);
+        object.renderWebGLStep(renderer, object, currentContext, parentMatrix);
 
         return currentContext;
     }

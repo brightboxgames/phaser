@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -19,7 +19,7 @@ var MakeTexCoordFrameWrap = function (disable)
     return {
         name: 'TexCoordFrameWrap',
         additions: {
-            fragmentProcess: '// Wrap texture coordinate into the UV space of the texture frame.\ntexCoord = mod(texCoord, 1.0) * outFrame.zw + outFrame.xy;'
+            texCoord: '// Wrap texture coordinate into the UV space of the texture frame.\ntexCoord = mod(texCoord, 1.0) * outFrame.zw + outFrame.xy;'
         },
         disable: !!disable
     };

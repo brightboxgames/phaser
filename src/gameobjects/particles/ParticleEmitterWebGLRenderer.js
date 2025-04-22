@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -8,10 +8,10 @@ var RectangleToRectangle = require('../../geom/intersects/RectangleToRectangle')
 var TransformMatrix = require('../components/TransformMatrix');
 var Utils = require('../../renderer/webgl/Utils');
 
-var tempMatrix1 = new TransformMatrix();
-var tempMatrix2 = new TransformMatrix();
-var tempMatrix3 = new TransformMatrix();
-var tempMatrix4 = new TransformMatrix();
+var camMatrix = new TransformMatrix();
+var calcMatrix = new TransformMatrix();
+var particleMatrix = new TransformMatrix();
+var managerMatrix = new TransformMatrix();
 
 var tempTexturer = {};
 var tempTinter = {};
@@ -35,23 +35,26 @@ var ParticleEmitterWebGLRenderer = function (renderer, emitter, drawingContext, 
 {
     var camera = drawingContext.camera;
 
-    var camMatrix = tempMatrix1;
-    var calcMatrix = tempMatrix2;
-    var particleMatrix = tempMatrix3;
-    var managerMatrix = tempMatrix4;
+    camera.addToRenderList(emitter);
+
+    camMatrix.copyWithScrollFactorFrom(
+        camera.getViewMatrix(!drawingContext.useCanvas),
+        camera.scrollX, camera.scrollY,
+        emitter.scrollFactorX, emitter.scrollFactorY
+    );
 
     if (parentMatrix)
     {
-        managerMatrix.loadIdentity();
-        managerMatrix.multiply(parentMatrix);
-        managerMatrix.translate(emitter.x, emitter.y);
-        managerMatrix.rotate(emitter.rotation);
-        managerMatrix.scale(emitter.scaleX, emitter.scaleY);
+        camMatrix.multiply(parentMatrix);
     }
-    else
-    {
-        managerMatrix.applyITRS(emitter.x, emitter.y, emitter.rotation, emitter.scaleX, emitter.scaleY);
-    }
+
+    managerMatrix.applyITRS(
+        emitter.x, emitter.y,
+        emitter.rotation,
+        emitter.scaleX, emitter.scaleY
+    );
+
+    camMatrix.multiply(managerMatrix);
 
     var getTint = Utils.getTintAppendFloatAlpha;
     var emitterAlpha = emitter.alpha;
@@ -69,12 +72,6 @@ var ParticleEmitterWebGLRenderer = function (renderer, emitter, drawingContext, 
     {
         emitter.depthSort();
     }
-
-    camera.addToRenderList(emitter);
-
-    camMatrix.copyFrom(camera.matrix);
-
-    camMatrix.multiplyWithOffset(managerMatrix, -camera.scrollX * emitter.scrollFactorX, -camera.scrollY * emitter.scrollFactorY);
 
     var tintFill = emitter.tintFill;
 
@@ -126,7 +123,7 @@ var ParticleEmitterWebGLRenderer = function (renderer, emitter, drawingContext, 
             normalMapRotation = particle.rotation;
             if (emitter.parentContainer)
             {
-                var matrix = emitter.getWorldTransformMatrix(tempMatrix1, tempMatrix2).rotate(particle.rotation);
+                var matrix = emitter.getWorldTransformMatrix(camMatrix, calcMatrix).rotate(particle.rotation);
 
                 normalMapRotation = matrix.rotationNormalized;
             }

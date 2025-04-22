@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -229,6 +229,7 @@ var FilterList = new Class({
      * @param {Phaser.BlendModes} [blendMode=Phaser.BlendModes.NORMAL] - The blend mode to apply to the view.
      * @param {number} [amount=1] - The amount of the blend effect to apply to the view. At 0, the original image is preserved. At 1, the blend texture is fully applied. The expected range is 0 to 1, but you can go outside that range for different effects.
      * @param {number[]} [color=[1, 1, 1, 1]] - The color to apply to the blend texture. Each value corresponds to a color channel in RGBA. The expected range is 0 to 1, but you can go outside that range for different effects.
+     * @return {Phaser.Filters.Blend} The new Blend filter controller.
      */
     addBlend: function (texture, blendMode, amount, color)
     {
@@ -365,7 +366,7 @@ var FilterList = new Class({
      * @param {number} [innerStrength=0] - The strength of the glow inward from the edge of textures.
      * @param {number} [scale=1] - The scale of the glow effect. This multiplies the fixed distance.
      * @param {boolean} [knockout=false] - If `true` only the glow is drawn, not the texture itself.
-     * @param {number} [quality=0.1] - The quality of the glow effect. This cannot be changed after the filter has been created.
+     * @param {number} [quality=10] - The quality of the glow effect. This cannot be changed after the filter has been created.
      * @param {number} [distance=10] - The distance of the glow effect. This cannot be changed after the filter has been created.
      *
      * @return {Phaser.Filters.Glow} The new Glow filter controller.
@@ -408,20 +409,29 @@ var FilterList = new Class({
      * the mask will match the context of the camera.
      * This is useful for creating effects that cover the entire view.
      *
+     * An optional `viewCamera` can be specified when creating the mask.
+     * If not used, mask objects will be viewed through a default camera.
+     * Set the `viewCamera` to the scene's main camera (`this.cameras.main`)
+     * to view the mask through the main camera.
+     *
      * @method Phaser.GameObjects.Components.FilterList#addMask
      * @since 4.0.0
      *
-     * @param {string} [texture='__WHITE'] - The unique string-based key of the texture to use for the mask, which must exist in the Texture Manager.
+     * @param {string|Phaser.GameObjects.GameObject} [mask='__WHITE'] - The source of the mask. This can be a unique string-based key of the texture to use for the mask, which must exist in the Texture Manager. Or it can be a GameObject, in which case the mask will render the GameObject to a DynamicTexture and use that.
      * @param {boolean} [invert=false] - Whether to invert the mask.
+     * @param {Phaser.Cameras.Scene2D.Camera} [viewCamera] - The Camera to use when rendering the mask with a GameObject. If not specified, uses the scene's `main` camera.
+     * @param {'local'|'world'} [viewTransform='world'] - The transform to use when rendering the mask with a GameObject. 'local' uses the GameObject's own properties. 'world' uses the GameObject's `parentContainer` value to compute a world position.
      *
      * @return {Phaser.Filters.Mask} The new Mask filter controller.
      */
-    addMask: function (texture, invert)
+    addMask: function (mask, invert, viewCamera, viewTransform)
     {
         return this.add(new Mask(
             this.camera,
-            texture,
-            invert
+            mask,
+            invert,
+            viewCamera,
+            viewTransform
         ));
     },
 

@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -53,7 +53,7 @@ var BitmapTextWebGLRenderer = function (renderer, src, drawingContext, parentMat
 
     var submitterNode = src.customRenderNodes.Submitter || src.defaultRenderNodes.Submitter;
 
-    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix).calc;
+    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix, !drawingContext.useCanvas).calc;
 
     var charColors = src.charColors;
 

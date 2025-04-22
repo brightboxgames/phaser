@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -147,6 +147,21 @@ var WebGLTextureUnitsWrapper = new Class({
             {
                 this.bind(textures[i], i, force, false);
             }
+        }
+    },
+
+    /**
+     * Unbinds all textures from all texture units.
+     * This will change the active texture unit to 0.
+     *
+     * @method Phaser.Renderer.WebGL.Wrappers.WebGLTextureUnitsWrapper#unbindAllUnits
+     * @since 4.0.0
+     */
+    unbindAllUnits: function ()
+    {
+        for (var i = this.units.length - 1; i >= 0; i--)
+        {
+            this.bind(null, i, true, false);
         }
     }
 });

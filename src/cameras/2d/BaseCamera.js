@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -346,7 +346,15 @@ var BaseCamera = new Class({
         this._rotation = 0;
 
         /**
-         * A local transform matrix used for internal calculations.
+         * A local transform matrix used to compute the camera view.
+         *
+         * In v3, this contained a combination of the external camera position,
+         * and the internal rotation and zoom.
+         * In v4, it instead contains the internal camera scroll, rotation, and zoom.
+         * Note that these are applied in the order of rotation, scale, then scroll.
+         * This makes it easier to apply scaleFactor to the scroll values.
+         *
+         * See also `matrixExternal` and `matrixCombined`.
          *
          * @name Phaser.Cameras.Scene2D.BaseCamera#matrix
          * @type {Phaser.GameObjects.Components.TransformMatrix}
@@ -354,6 +362,24 @@ var BaseCamera = new Class({
          * @since 3.0.0
          */
         this.matrix = new TransformMatrix();
+
+        /**
+         * A local transform matrix combining `matrix` and `matrixExternal`.
+         *
+         * @name Phaser.Cameras.Scene2D.BaseCamera#matrixCombined
+         * @type {Phaser.GameObjects.Components.TransformMatrix}
+         * @since 4.0.0
+         */
+        this.matrixCombined = new TransformMatrix();
+
+        /**
+         * A local transform matrix used to compute the camera location.
+         *
+         * @name Phaser.Cameras.Scene2D.BaseCamera#matrixExternal
+         * @type {Phaser.GameObjects.Components.TransformMatrix}
+         * @since 4.0.0
+         */
+        this.matrixExternal = new TransformMatrix();
 
         /**
          * Does this Camera have a transparent background?
@@ -517,6 +543,36 @@ var BaseCamera = new Class({
          * @since 3.60.0
          */
         this.isSceneCamera = true;
+
+        /**
+         * Whether to force the camera to render via a framebuffer.
+         * This only applies when using the WebGL renderer.
+         * This makes the camera contents available to other WebGL processes,
+         * such as `CaptureFrame`.
+         *
+         * @name Phaser.Cameras.Scene2D.BaseCamera#forceComposite
+         * @type {boolean}
+         * @default false
+         * @since 4.0.0
+         * @webglOnly
+         */
+        this.forceComposite = false;
+
+        /**
+         * Can this Camera render rounded pixel values?
+         * 
+         * This property is updated during the `preRender` method and should not be
+         * set directly. It is set based on the `roundPixels` property of the Camera
+         * combined with the zoom level. If the zoom is an integer then the WebGL
+         * Renderer can apply rounding during rendering.
+         *
+         * @name Phaser.Cameras.Scene2D.BaseCamera#renderRoundPixels
+         * @type {boolean}
+         * @readonly
+         * @default true
+         * @since 3.86.0
+         */
+        this.renderRoundPixels = true;
     },
 
     /**
@@ -758,9 +814,6 @@ var BaseCamera = new Class({
             return renderableObjects;
         }
 
-        var mve = cameraMatrix[4];
-        var mvf = cameraMatrix[5];
-
         var scrollX = this.scrollX;
         var scrollY = this.scrollY;
         var cameraW = this.width;
@@ -790,10 +843,10 @@ var BaseCamera = new Class({
             var objectH = object.height;
             var objectX = (object.x - (scrollX * object.scrollFactorX)) - (objectW * object.originX);
             var objectY = (object.y - (scrollY * object.scrollFactorY)) - (objectH * object.originY);
-            var tx = (objectX * mva + objectY * mvc + mve);
-            var ty = (objectX * mvb + objectY * mvd + mvf);
-            var tw = ((objectX + objectW) * mva + (objectY + objectH) * mvc + mve);
-            var th = ((objectX + objectW) * mvb + (objectY + objectH) * mvd + mvf);
+            var tx = (objectX * mva + objectY * mvc);
+            var ty = (objectX * mvb + objectY * mvd);
+            var tw = ((objectX + objectW) * mva + (objectY + objectH) * mvc);
+            var th = ((objectX + objectW) * mvb + (objectY + objectH) * mvd);
 
             if ((tw > cullLeft && tx < cullRight) && (th > cullTop && ty < cullBottom))
             {
@@ -823,7 +876,7 @@ var BaseCamera = new Class({
     {
         if (output === undefined) { output = new Vector2(); }
 
-        var cameraMatrix = this.matrix.matrix;
+        var cameraMatrix = this.matrixCombined.matrix;
 
         var mva = cameraMatrix[0];
         var mvb = cameraMatrix[1];
@@ -852,21 +905,9 @@ var BaseCamera = new Class({
         var ime = (mvc * mvf - mvd * mve) * determinant;
         var imf = (mvb * mve - mva * mvf) * determinant;
 
-        var c = Math.cos(this.rotation);
-        var s = Math.sin(this.rotation);
-
-        var zoomX = this.zoomX;
-        var zoomY = this.zoomY;
-
-        var scrollX = this.scrollX;
-        var scrollY = this.scrollY;
-
-        var sx = x + ((scrollX * c - scrollY * s) * zoomX);
-        var sy = y + ((scrollX * s + scrollY * c) * zoomY);
-
-        //  Apply transform to point
-        output.x = (sx * ima + sy * imc) + ime;
-        output.y = (sx * imb + sy * imd) + imf;
+        // Apply transform to point
+        output.x = (x * ima + y * imc) + ime;
+        output.y = (x * imb + y * imd) + imf;
 
         return output;
     },
@@ -1095,6 +1136,27 @@ var BaseCamera = new Class({
             this.scrollX = this.clampX(this.scrollX);
             this.scrollY = this.clampY(this.scrollY);
         }
+
+        return this;
+    },
+
+    /**
+     * Sets the `forceComposite` property of this Camera.
+     * This property is only used by the WebGL Renderer.
+     * If `true` the camera will render via a framebuffer,
+     * making it available to other WebGL systems.
+     *
+     * @method Phaser.Cameras.Scene2D.BaseCamera#setForceComposite
+     * @since 4.0.0
+     * @webglOnly
+     *
+     * @param {boolean} value - The value to set the property to.
+     *
+     * @returns {this} This Camera instance.
+     */
+    setForceComposite: function (value)
+    {
+        this.forceComposite = value;
 
         return this;
     },
@@ -1552,6 +1614,8 @@ var BaseCamera = new Class({
         this.removeAllListeners();
 
         this.matrix.destroy();
+        this.matrixCombined.destroy();
+        this.matrixExternal.destroy();
 
         this.culledObjects = [];
 

@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -78,7 +78,7 @@ if (typeof WEBGL_RENDERER)
          * This is only available if you use the `enableFilters` method.
          *
          * @name Phaser.GameObjects.Components.Filters#filters
-         * @type {{internal: Phaser.GameObjects.Components.FilterList, external: Phaser.GameObjects.Components.FilterList}|null}}
+         * @type {Phaser.Types.GameObjects.FiltersInternalExternal|null}
          * @readonly
          * @since 4.0.0
          * @webglOnly
@@ -173,6 +173,7 @@ if (typeof WEBGL_RENDERER)
 
         /**
          * A transform matrix used to render the filters.
+         * It holds the transform of the Game Object.
          *
          * This is only available if you use the `enableFilters` method.
          *
@@ -183,6 +184,20 @@ if (typeof WEBGL_RENDERER)
          * @webglOnly
          */
         _filtersMatrix: null,
+
+        /**
+         * A transform matrix used to render the filters.
+         * It holds the view matrix for the filter camera, adjusted for the Game Object.
+         *
+         * This is only available if you use the `enableFilters` method.
+         *
+         * @name Phaser.GameObjects.Components.Filters#_filtersViewMatrix
+         * @type {Phaser.GameObjects.Components.TransformMatrix}
+         * @private
+         * @since 4.0.0
+         * @webglOnly
+         */
+        _filtersViewMatrix: null,
 
         /**
          * Whether this Game Object will render filters.
@@ -247,6 +262,7 @@ if (typeof WEBGL_RENDERER)
             }
 
             this._filtersMatrix = new TransformMatrix();
+            this._filtersViewMatrix = new TransformMatrix();
 
             // Check whether the object is poorly bounded, and needs to focus on the context.
             if (
@@ -307,14 +323,18 @@ if (typeof WEBGL_RENDERER)
             // because other calls to `addToRenderList` will happen in another camera.
             camera.addToRenderList(gameObject);
 
+            var filtersFocusContext = gameObject.filtersFocusContext;
+
             if (gameObject.filtersAutoFocus)
             {
-                var contextCamera = null;
-                if (gameObject.filtersFocusContext)
+                if (filtersFocusContext)
                 {
-                    contextCamera = camera;
+                    gameObject.focusFiltersOnCamera(camera);
                 }
-                gameObject.focusFilters(contextCamera);
+                else
+                {
+                    gameObject.focusFilters();
+                }
             }
 
             var filterCamera = gameObject.filterCamera;
@@ -322,56 +342,60 @@ if (typeof WEBGL_RENDERER)
 
             // Get transform.
             var transformMatrix = gameObject._filtersMatrix;
-            var cameraMatrix = camera.matrix;
-
-            var flipX = gameObject.flipX ? -1 : 1;
-            var flipY = gameObject.flipY ? -1 : 1;
-            var scrollFactorX = gameObject.scrollFactorX;
-            var scrollFactorY = gameObject.scrollFactorY;
-
-            if (gameObject.type === 'Layer')
-            {
-                transformMatrix.loadIdentity();
-                scrollFactorX = 1;
-                scrollFactorY = 1;
-            }
-            else
-            {
-                transformMatrix.applyITRS(
-                    gameObject.x,
-                    gameObject.y,
-                    gameObject.rotation,
-                    gameObject.scaleX * flipX,
-                    gameObject.scaleY * flipY
-                );
-            }
-
-            // Offset origin.
-            var width = filterCamera.width;
-            var height = filterCamera.height;
-            transformMatrix.translate(
-                -width * filterCamera.originX,
-                -height * filterCamera.originY
+            var cameraMatrix = gameObject._filtersViewMatrix.copyWithScrollFactorFrom(
+                camera.getViewMatrix(!drawingContext.useCanvas),
+                camera.scrollX, camera.scrollY,
+                gameObject.scrollFactorX, gameObject.scrollFactorY
             );
 
-            // Apply camera.
             if (parentMatrix)
             {
-                cameraMatrix = new TransformMatrix().copyFrom(camera.matrix);
-                cameraMatrix.multiplyWithOffset(
-                    parentMatrix,
-                    -camera.scrollX * scrollFactorX,
-                    -camera.scrollY * scrollFactorY
-                );
+                cameraMatrix.multiply(parentMatrix);
+            }
+
+            if (filtersFocusContext)
+            {
+                transformMatrix.loadIdentity();
             }
             else
             {
-                transformMatrix.e -= camera.scrollX * scrollFactorX;
-                transformMatrix.f -= camera.scrollY * scrollFactorY;
+                if (gameObject.type === 'Layer')
+                {
+                    transformMatrix.loadIdentity();
+                }
+                else
+                {
+                    var flipX = gameObject.flipX ? -1 : 1;
+                    var flipY = gameObject.flipY ? -1 : 1;
+                    transformMatrix.applyITRS(
+                        gameObject.x,
+                        gameObject.y,
+                        gameObject.rotation,
+                        gameObject.scaleX * flipX,
+                        gameObject.scaleY * flipY
+                    );
+                }
+    
+                // Offset origin.
+                var width = filterCamera.width;
+                var height = filterCamera.height;
+                transformMatrix.translate(
+                    -width * filterCamera.originX,
+                    -height * filterCamera.originY
+                );
+
+                cameraMatrix.multiply(transformMatrix, transformMatrix);
             }
 
-            //  Multiply the camera by the transform, store result in transformMatrix
-            cameraMatrix.multiply(transformMatrix, transformMatrix);
+            // Set object scrollFactor to default.
+            // We can't accurately focus the camera on the object if it has a scrollFactor,
+            // because the camera needs to be set further away,
+            // going to infinity at scrollFactor 0.
+            // The scroll factor is baked into the transformMatrix, above.
+            var scrollX = gameObject.scrollFactorX;
+            var scrollY = gameObject.scrollFactorY;
+            gameObject.scrollFactorX = 1;
+            gameObject.scrollFactorY = 1;
 
             // Now we have the transform for the game object.
             // Render game object to framebuffer.
@@ -383,6 +407,10 @@ if (typeof WEBGL_RENDERER)
                 true,
                 renderStep + 1
             );
+
+            // Restore scrollFactor.
+            gameObject.scrollFactorX = scrollX;
+            gameObject.scrollFactorY = scrollY;
         },
 
         /**
@@ -390,9 +418,7 @@ if (typeof WEBGL_RENDERER)
          * This sets the size and position of the filter camera to match the GameObject.
          * This is called automatically on render if `filtersAutoFocus` is enabled.
          *
-         * If a camera is provided, this will focus on the camera.
-         * Otherwise, this will focus on the GameObject's raw dimensions
-         * if available.
+         * This will focus on the GameObject's raw dimensions if available.
          * If the GameObject has no dimensions, this will focus on the context:
          * the camera belonging to the DrawingContext used to render the GameObject.
          * Context focus occurs during rendering,
@@ -401,69 +427,35 @@ if (typeof WEBGL_RENDERER)
          * @method Phaser.GameObjects.Components.Filters#focusFilters
          * @webglOnly
          * @since 4.0.0
-         * @param {Phaser.Cameras.Scene2D.Camera} [camera] - The camera to focus on. Optional; if provided, this will focus on the camera.
          * @returns {this}
          */
-        focusFilters: function (camera)
+        focusFilters: function ()
         {
             var posX = this.x;
             var posY = this.y;
-            var rotation = this.rotation;
-            var scaleX = this.scaleX;
-            var scaleY = this.scaleY;
             var originX = this.originX;
             var originY = this.originY;
             var width = this.width;
             var height = this.height;
-            var centerX;
-            var centerY;
 
-            var bounded = false;
-
-            // Attempt to create bounds from basic object properties.
-            if (!camera)
+            if (
+                this.type === 'Layer' ||
+                isNaN(posX) || isNaN(posY) ||
+                isNaN(width) || isNaN(height) ||
+                isNaN(originX) || isNaN(originY) ||
+                width === 0 || height === 0
+            )
             {
-                if (!(
-                    this.type === 'Layer' ||
-                    isNaN(posX) || isNaN(posY) ||
-                    isNaN(width) || isNaN(height) ||
-                    isNaN(originX) || isNaN(originY) ||
-                    width === 0 || height === 0
-                ))
-                {
-                    centerX = posX;
-                    centerY = posY;
-                    bounded = true;
-                }
+                this.filtersFocusContext = true;
+                return this;
             }
 
-            // If the object has no valid bounds, focus on the context.
-            if (!bounded)
-            {
-                if (camera)
-                {
-                    posX = posX || 0;
-                    posY = posY || 0;
-                    rotation = rotation || 0;
-                    scaleX = scaleX || 1;
-                    scaleY = scaleY || 1;
+            var rotation = this.rotation;
+            var scaleX = this.scaleX;
+            var scaleY = this.scaleY;
 
-                    width = camera.width;
-                    height = camera.height;
-                    centerX = camera.scrollX + width / 2;
-                    centerY = camera.scrollY + height / 2;
-                    originX = 0.5 + (posX - centerX) / width;
-                    originY = 0.5 + (posY - centerY) / height;
-                }
-                else
-                {
-                    this.filtersFocusContext = true;
-                    return this;
-                }
-            }
-
-            // Set the filter camera size to match the object.
-            this.setFilterSize(width, height);
+            var centerX = posX + width * (0.5 - originX);
+            var centerY = posY + height * (0.5 - originY);
 
             // Handle flip.
             if (this.flipX)
@@ -475,12 +467,57 @@ if (typeof WEBGL_RENDERER)
                 scaleY *= -1;
             }
 
+            // Set the filter camera size to match the object.
+            this.setFilterSize(width, height);
+
             // Set the filter camera to match the object.
             this.filterCamera
                 .centerOn(centerX, centerY)
                 .setRotation(-rotation)
                 .setOrigin(originX, originY)
                 .setZoom(1 / scaleX, 1 / scaleY);
+
+            return this;
+        },
+
+        /**
+         * Focus the filter camera on a specific camera.
+         * This is used internally when `filtersFocusContext` is enabled.
+         *
+         * @method Phaser.GameObjects.Components.Filters#focusFiltersOnCamera
+         * @webglOnly
+         * @since 4.0.0
+         * @param {Phaser.Cameras.Scene2D.Camera} camera - The camera to focus on.
+         * @returns {this}
+         */
+        focusFiltersOnCamera: function (camera)
+        {
+            var width = camera.width;
+            var height = camera.height;
+            var posX = camera.scrollX;
+            var posY = camera.scrollY;
+            var rotation = camera.rotation;
+            var zoomX = camera.zoomX;
+            var zoomY = camera.zoomY;
+
+            var parent = this.parentContainer;
+
+            if (parent)
+            {
+                var parentMatrix = parent.getWorldTransformMatrix();
+                posX -= parentMatrix.tx;
+                posY -= parentMatrix.ty;
+                rotation += parentMatrix.rotation;
+                zoomX *= parentMatrix.scaleX;
+                zoomY *= parentMatrix.scaleY;
+            }
+
+            // Set the filter camera size to match the object.
+            this.setFilterSize(width, height);
+
+            this.filterCamera.setScroll(posX, posY);
+            this.filterCamera.setRotation(rotation);
+            this.filterCamera.setZoom(zoomX, zoomY);
 
             return this;
         },
@@ -578,6 +615,74 @@ if (typeof WEBGL_RENDERER)
                 return this;
             }
             filterCamera.setSize(width, height);
+
+            return this;
+        },
+
+        /**
+         * Set whether filters should be updated every frame.
+         * Sets the `filtersAutoFocus` property.
+         *
+         * @method Phaser.GameObjects.Components.Filters#setFiltersAutoFocus
+         * @webglOnly
+         * @since 4.0.0
+         * @param {boolean} value - Whether filters should be updated every frame.
+         * @returns {this}
+         */
+        setFiltersAutoFocus: function (value)
+        {
+            this.filtersAutoFocus = value;
+
+            return this;
+        },
+
+        /**
+         * Set whether the filters should focus on the context.
+         * Sets the `filtersFocusContext` property.
+         *
+         * @method Phaser.GameObjects.Components.Filters#setFiltersFocusContext
+         * @webglOnly
+         * @since 4.0.0
+         * @param {boolean} value - Whether the filters should focus on the context.
+         * @returns {this}
+         */
+        setFiltersFocusContext: function (value)
+        {
+            this.filtersFocusContext = value;
+
+            return this;
+        },
+
+        /**
+         * Set whether the filters should always draw to a framebuffer.
+         * Sets the `filtersForceComposite` property.
+         *
+         * @method Phaser.GameObjects.Components.Filters#setFiltersForceComposite
+         * @webglOnly
+         * @since 4.0.0
+         * @param {boolean} value - Whether the object should always draw to a framebuffer, even if there are no active filters.
+         * @returns {this}
+         */
+        setFiltersForceComposite: function (value)
+        {
+            this.filtersForceComposite = value;
+
+            return this;
+        },
+
+        /**
+         * Set whether the filters should be rendered.
+         * Sets the `renderFilters` property.
+         *
+         * @method Phaser.GameObjects.Components.Filters#setRenderFilters
+         * @webglOnly
+         * @since 4.0.0
+         * @param {boolean} value - Whether the filters should be rendered.
+         * @returns {this}
+         */
+        setRenderFilters: function (value)
+        {
+            this.renderFilters = value;
 
             return this;
         }

@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -29,7 +29,7 @@ var GridWebGLRenderer = function (renderer, src, drawingContext, parentMatrix)
     var fillRectNode = src.customRenderNodes.FillRect || src.defaultRenderNodes.FillRect;
     var submitterNode = src.customRenderNodes.Submitter || src.defaultRenderNodes.Submitter;
 
-    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix).calc;
+    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix, !drawingContext.useCanvas).calc;
 
     calcMatrix.translate(-src._displayOriginX, -src._displayOriginY);
 

@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -43,14 +43,15 @@ var FillCamera = new Class({
      * @since 4.0.0
      * @param {Phaser.Renderer.WebGL.DrawingContext} drawingContext - The context currently in use.
      * @param {number} color - The color to fill the camera with.
+     * @param {boolean} [isFramebufferCamera] - Is this camera rendering to a framebuffer? If so, the camera position will not be applied, on the assumption that the camera position will be used to position the framebuffer in the external context.
      */
-    run: function (drawingContext, color)
+    run: function (drawingContext, color, isFramebufferCamera)
     {
         this.onRunBegin(drawingContext);
 
         var camera = drawingContext.camera;
-        var cx = camera.x;
-        var cy = camera.y;
+        var cx = isFramebufferCamera ? 0 : camera.x;
+        var cy = isFramebufferCamera ? 0 : camera.y;
         var cw = camera.width;
         var ch = camera.height;
 

@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -436,6 +436,9 @@ var DrawingContext = new Class({
      */
     setScissorBox: function (x, y, width, height)
     {
+        // Convert Y coordinate to WebGL space.
+        y = this.height - y - height;
+
         this.state.scissor.box = [ x, y, width, height ];
     },
 

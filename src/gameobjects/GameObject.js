@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -23,6 +23,9 @@ var SceneEvents = require('../scene/events');
  * @extends Phaser.Events.EventEmitter
  * @constructor
  * @since 3.0.0
+ *
+ * @extends Phaser.GameObjects.Components.Filters
+ * @extends Phaser.GameObjects.Components.RenderSteps
  *
  * @param {Phaser.Scene} scene - The Scene to which this Game Object belongs.
  * @param {string} type - A textual representation of the type of Game Object, i.e. `sprite`.
@@ -751,7 +754,7 @@ var GameObject = new Class({
      * every game frame. This method is passed two parameters: `delta` and `time`.
      *
      * If you wish to run your own logic within `preUpdate` then you should always call
-     * `super.preUpdate(delta, time)` within it, or it may fail to process required operations,
+     * `super.preUpdate(time, delta)` within it, or it may fail to process required operations,
      * such as Sprite animations.
      *
      * @method Phaser.GameObjects.GameObject#addToUpdateList

@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -41,7 +41,7 @@ var WebGLSnapshot = function (sourceContext, config)
     {
         var pixel = new Uint8Array(4);
 
-        var destY = (isFramebuffer) ? y : bufferHeight - y;
+        var destY = bufferHeight - y;
 
         gl.readPixels(x, destY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
 
@@ -70,13 +70,27 @@ var WebGLSnapshot = function (sourceContext, config)
             for (var px = 0; px < width; px++)
             {
                 var sourceIndex = ((height - py - 1) * width + px) * 4;
+                var destIndex = (py * width + px) * 4;
 
-                var destIndex = (isFramebuffer) ? total - ((py * width + (width - px)) * 4) : (py * width + px) * 4;
+                var r = pixels[sourceIndex + 0];
+                var g = pixels[sourceIndex + 1];
+                var b = pixels[sourceIndex + 2];
+                var a = pixels[sourceIndex + 3];
 
-                data[destIndex + 0] = pixels[sourceIndex + 0];
-                data[destIndex + 1] = pixels[sourceIndex + 1];
-                data[destIndex + 2] = pixels[sourceIndex + 2];
-                data[destIndex + 3] = pixels[sourceIndex + 3];
+                // Un-premultiplication.
+                if (config.unpremultiplyAlpha && a !== 0)
+                {
+                    var ratio = 255 / a;
+
+                    r = Math.floor(r * ratio);
+                    g = Math.floor(g * ratio);
+                    b = Math.floor(b * ratio);
+                }
+
+                data[destIndex + 0] = r;
+                data[destIndex + 1] = g;
+                data[destIndex + 2] = b;
+                data[destIndex + 3] = a;
             }
         }
 

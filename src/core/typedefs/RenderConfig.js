@@ -7,7 +7,7 @@
  * @property {boolean} [desynchronized=false] - When set to `true` it will create a desynchronized context for both 2D and WebGL. See https://developers.google.com/web/updates/2019/05/desynchronized for details.
  * @property {boolean} [pixelArt=false] - Sets `antialias` to false and `roundPixels` to true. This is the best setting for pixel-art games.
  * @property {boolean} [smoothPixelArt=false] - WebGL only. Sets `antialias` to true and `pixelArt` to false. Texture-based Game Objects use special shader setting that preserve blocky pixels, but smooth the edges between the pixels. This is only visible when objects are scaled up; otherwise, `antialias` is simpler.
- * @property {boolean} [roundPixels=true] - Draw texture-based Game Objects at only whole-integer positions. Game Objects without textures, like Graphics, ignore this property.
+ * @property {boolean} [roundPixels=false] - Draw texture-based Game Objects at only whole-integer positions. Game Objects without textures, like Graphics, ignore this property.
  * @property {boolean} [selfShadow=false] - On textured objects with lighting, this enables self-shadowing based on the diffuse map.
  * @property {number} [pathDetailThreshold=1] - Threshold for combining points into a single path in the WebGL renderer for Graphics objects. This can be overridden at the Graphics object level.
  * @property {boolean} [transparent=false] - Whether the game canvas will be transparent. Boolean that indicates if the canvas contains an alpha channel. If set to false, the browser now knows that the backdrop is always opaque, which can speed up drawing of transparent content and images.
@@ -22,4 +22,5 @@
  * @property {number} [maxTextures=-1] - When in WebGL mode, this sets the maximum number of GPU Textures to use. The default, -1, will use all available units. The WebGL1 spec says all browsers should provide a minimum of 8.
  * @property {string} [mipmapFilter=''] - The mipmap magFilter to be used when creating WebGL textures. Don't set unless you wish to create mipmaps. Set to one of the following: 'NEAREST', 'LINEAR', 'NEAREST_MIPMAP_NEAREST', 'LINEAR_MIPMAP_NEAREST', 'NEAREST_MIPMAP_LINEAR' or 'LINEAR_MIPMAP_LINEAR'.
  * @property {boolean} [autoMobileTextures=true] - If iOS or Android detected, automatically restrict WebGL to use 1 texture per batch. This can help performance on some devices.
+ * @property {Record<string, Function>} [renderNodes] - A map of custom Render Nodes to be added to the WebGL Renderer. The values will be added to the RenderNodeManager, using the keys as the names.
  */

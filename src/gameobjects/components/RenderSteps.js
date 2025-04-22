@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -42,7 +42,7 @@ if (typeof WEBGL_RENDERER)
          * it allows those processes to defer `renderWebGL`
          * and otherwise manage the flow of rendering.
          *
-         * @method Phaser.GameObjects.GameObject#renderWebGLStep
+         * @method Phaser.GameObjects.Components.RenderSteps#renderWebGLStep
          * @webglOnly
          * @since 4.0.0
          * @param {Phaser.Renderer.WebGL.WebGLRenderer} renderer - The WebGL Renderer instance to render with.
@@ -50,13 +50,17 @@ if (typeof WEBGL_RENDERER)
          * @param {Phaser.Renderer.WebGL.DrawingContext} drawingContext - The current drawing context.
          * @param {Phaser.GameObjects.Components.TransformMatrix} [parentMatrix] - The parent matrix of the Game Object, if it has one.
          * @param {number} [renderStep=0] - Which step of the rendering process should be run?
+         * @param {Phaser.GameObjects.GameObject[]} [displayList] - The display list which is currently being rendered. If not provided, it will be created with the Game Object.
+         * @param {number} [displayListIndex=0] - The index of the Game Object within the display list.
          */
         renderWebGLStep: function (
             renderer,
             gameObject,
             drawingContext,
             parentMatrix,
-            renderStep
+            renderStep,
+            displayList,
+            displayListIndex
         )
         {
             if (renderStep === undefined)
@@ -71,7 +75,17 @@ if (typeof WEBGL_RENDERER)
                 return;
             }
 
-            fn(renderer, gameObject, drawingContext, parentMatrix, renderStep);
+            if (!displayList)
+            {
+                displayList = [ gameObject ];
+                displayListIndex = 0;
+            }
+            else if (displayListIndex === undefined)
+            {
+                displayListIndex = 0;
+            }
+
+            fn(renderer, gameObject, drawingContext, parentMatrix, renderStep, displayList, displayListIndex);
         },
 
         /**
@@ -81,10 +95,11 @@ if (typeof WEBGL_RENDERER)
          * It should call the next render step in the list.
          * This allows render steps to control the rendering flow.
          *
-         * @method Phaser.GameObjects.GameObject#addRenderStep
+         * @method Phaser.GameObjects.Components.RenderSteps#addRenderStep
          * @param {Phaser.Types.GameObjects.RenderWebGLStep} fn - The render step function to add.
          * @param {number} [index] - The index in the render list to add the step to. Omit to add to the end.
-         * @returns {this}
+         * 
+         * @return {this} This Game Object instance.
          */
         addRenderStep: function (fn, index)
         {

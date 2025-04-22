@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -15,6 +15,7 @@ var GetFastValue = require('../utils/object/GetFastValue');
 var Texture = require('./Texture');
 var Utils = require('../renderer/webgl/Utils');
 var DynamicTextureCommands = require('./DynamicTextureCommands');
+var TransformMatrix = require('../gameobjects/components/TransformMatrix');
 
 /**
  * @classdesc
@@ -58,6 +59,7 @@ var DynamicTextureCommands = require('./DynamicTextureCommands');
  * @param {string} key - The unique string-based key of this Texture.
  * @param {number} [width=256] - The width of this Dymamic Texture in pixels. Defaults to 256 x 256.
  * @param {number} [height=256] - The height of this Dymamic Texture in pixels. Defaults to 256 x 256.
+ * @param {boolean} [forceEven=true] - Force the given width and height to be rounded to even values. This significantly improves the rendering quality. Set to false if you know you need an odd sized texture.
  */
 var DynamicTexture = new Class({
 
@@ -65,10 +67,11 @@ var DynamicTexture = new Class({
 
     initialize:
 
-    function DynamicTexture (manager, key, width, height)
+    function DynamicTexture (manager, key, width, height, forceEven)
     {
         if (width === undefined) { width = 256; }
         if (height === undefined) { height = 256; }
+        if (forceEven === undefined) { forceEven = true; }
 
         /**
          * The internal data type of this object.
@@ -160,7 +163,7 @@ var DynamicTexture = new Class({
          * You can scroll, zoom and rotate this Camera.
          *
          * @name Phaser.Textures.DynamicTexture#camera
-         * @type {Phaser.Cameras.Scene2D.BaseCamera}
+         * @type {Phaser.Cameras.Scene2D.Camera}
          * @since 3.12.0
          */
         this.camera = new Camera(0, 0, width, height).setScene(manager.game.scene.systemScene, false);
@@ -186,7 +189,7 @@ var DynamicTexture = new Class({
             frame.source.glTexture = this.drawingContext.texture;
         }
 
-        this.setSize(width, height);
+        this.setSize(width, height, forceEven);
     },
 
     /**
@@ -204,12 +207,30 @@ var DynamicTexture = new Class({
      *
      * @param {number} width - The new width of this Dynamic Texture.
      * @param {number} [height=width] - The new height of this Dynamic Texture. If not specified, will be set the same as the `width`.
+     * @param {boolean} [forceEven=true] - Force the given width and height to be rounded to even values. This significantly improves the rendering quality. Set to false if you know you need an odd sized texture.
      *
      * @return {this} This Dynamic Texture.
      */
-    setSize: function (width, height)
+    setSize: function (width, height, forceEven)
     {
         if (height === undefined) { height = width; }
+        if (forceEven === undefined) { forceEven = true; }
+
+        if (forceEven)
+        {
+            width = Math.floor(width);
+            height = Math.floor(height);
+
+            if (width % 2 !== 0)
+            {
+                width++;
+            }
+
+            if (height % 2 !== 0)
+            {
+                height++;
+            }
+        }
 
         var frame = this.get();
         var source = frame.source;
@@ -334,10 +355,22 @@ var DynamicTexture = new Class({
             {
                 case DynamicTextureCommands.CLEAR:
                 {
-                    context.save();
-                    context.setTransform(1, 0, 0, 1, 0, 0);
-                    context.clearRect(0, 0, this.width, this.height);
-                    context.restore();
+                    x = commandBuffer[++index];
+                    y = commandBuffer[++index];
+                    width = commandBuffer[++index];
+                    height = commandBuffer[++index];
+
+                    if (x !== undefined && y !== undefined && width !== undefined && height !== undefined)
+                    {
+                        context.clearRect(x, y, width, height);
+                    }
+                    else
+                    {
+                        context.save();
+                        context.setTransform(1, 0, 0, 1, 0, 0);
+                        context.clearRect(0, 0, this.width, this.height);
+                        context.restore();
+                    }
                     break;
                 }
 
@@ -505,6 +538,22 @@ var DynamicTexture = new Class({
                     callback();
                     break;
                 }
+
+                case DynamicTextureCommands.CAPTURE:
+                {
+                    object = commandBuffer[++index];
+                    var config = commandBuffer[++index];
+
+                    var cacheConfig = this.startCapture(object, config);
+                    object.renderCanvas(
+                        renderer,
+                        object,
+                        config.camera || camera,
+                        cacheConfig.transform
+                    );
+                    this.finishCapture(object, cacheConfig);
+                    break;
+                }
             }
         }
 
@@ -561,17 +610,27 @@ var DynamicTexture = new Class({
     },
 
     /**
-     * Fully clears this Dynamic Texture, erasing everything from it and resetting it back to
-     * a blank, transparent, texture.
+     * Clears a portion or everything from this Dynamic Texture by erasing it and resetting it back to
+     * a blank, transparent, texture. To clear an area, specify the `x`, `y`, `width` and `height`.
      *
      * @method Phaser.Textures.DynamicTexture#clear
      * @since 3.2.0
      *
+     * @param {number} [x=0] - The left coordinate of the fill rectangle.
+     * @param {number} [y=0] - The top coordinate of the fill rectangle.
+     * @param {number} [width=this.width] - The width of the fill rectangle.
+     * @param {number} [height=this.height] - The height of the fill rectangle.
+     *
      * @return {this} This Dynamic Texture instance.
      */
-    clear: function ()
+    clear: function (x, y, width, height)
     {
-        this.commandBuffer.push(DynamicTextureCommands.CLEAR);
+        if (x === undefined) { x = 0; }
+        if (y === undefined) { y = 0; }
+        if (width === undefined) { width = this.width; }
+        if (height === undefined) { height = this.height; }
+
+        this.commandBuffer.push(DynamicTextureCommands.CLEAR, x, y, width, height);
 
         return this;
     },
@@ -757,7 +816,7 @@ var DynamicTexture = new Class({
                     var child = children[c];
                     if (child.willRender(this.camera))
                     {
-                        this.draw(child, child.x + x || 0, child.y + y || 0);
+                        this.draw(child, x, y);
                     }
                 }
             }
@@ -779,6 +838,197 @@ var DynamicTexture = new Class({
         }
 
         return this;
+    },
+
+    /**
+     * Draws the given object to this Dynamic Texture.
+     * This allows you to draw the object as it appears in the game world,
+     * or with various parameter overrides in the config.
+     *
+     * @method Phaser.Textures.DynamicTexture#capture
+     * @since 4.0.0
+     *
+     * @param {Phaser.GameObjects.GameObject} entry - Any renderable GameObject.
+     * @param {Phaser.Types.Textures.CaptureConfig} config - The configuration object for the capture.
+     *
+     * @return {this} This Dynamic Texture instance.
+     */
+    capture: function (entry, config)
+    {
+        if (!config) { config = {}; }
+
+        this.commandBuffer.push(DynamicTextureCommands.CAPTURE, entry, config);
+
+        return this;
+    },
+
+    /**
+     * Prepares an object to be rendered using the `capture` method.
+     * This method is called automatically during rendering.
+     * Do not call it directly.
+     *
+     * @method Phaser.Textures.DynamicTexture#startCapture
+     * @since 4.0.0
+     *
+     * @param {Phaser.GameObjects.GameObject} entry - The object to set up for capture.
+     * @param {Phaser.Types.Textures.CaptureConfig} config - The configuration object for the capture.
+     *
+     * @return {Phaser.Types.Textures.CaptureConfig} A configuration object containing the appropriate parent transform in `transform`, and the cached object properties in any fields that were overridden.
+     */
+    startCapture: function (entry, config)
+    {
+        var cacheConfig = {};
+
+        // Compute the parent transform.
+        var parentTransform = undefined;
+        if (config.transform instanceof TransformMatrix)
+        {
+            parentTransform = config.transform;
+        }
+        else if (config.transform === 'world' && entry.parentContainer)
+        {
+            parentTransform = new TransformMatrix();
+            var tempMatrix = new TransformMatrix();
+            var parent = entry.parentContainer;
+            while (parent)
+            {
+                tempMatrix.applyITRS(parent.x, parent.y, parent.rotation, parent.scaleX, parent.scaleY);
+                parentTransform.multiply(tempMatrix);
+                parent = parent.parentContainer;
+            }
+        }
+        if (parentTransform)
+        {
+            cacheConfig.transform = parentTransform;
+        }
+
+        if (config.camera)
+        {
+            // Ensure that parent transform exists.
+            if (!parentTransform)
+            {
+                parentTransform = new TransformMatrix();
+            }
+
+            // Ensure that camera transforms are applied.
+            config.camera.matrixExternal.multiply(parentTransform, parentTransform);
+        }
+
+        // Cache and override the object properties.
+        if (config.x !== undefined)
+        {
+            cacheConfig.x = entry.x;
+            entry.x = config.x;
+        }
+        if (config.y !== undefined)
+        {
+            cacheConfig.y = entry.y;
+            entry.y = config.y;
+        }
+        if (config.rotation !== undefined)
+        {
+            cacheConfig.rotation = entry.rotation;
+            entry.rotation = config.rotation;
+        }
+        else if (config.angle !== undefined)
+        {
+            // Only apply angle if rotation is not defined.
+            cacheConfig.rotation = entry.rotation;
+            entry.angle = config.angle;
+        }
+        if (config.scaleX !== undefined)
+        {
+            cacheConfig.scaleX = entry.scaleX;
+            entry.scaleX = config.scaleX;
+        }
+        if (config.scaleY !== undefined)
+        {
+            cacheConfig.scaleY = entry.scaleY;
+            entry.scaleY = config.scaleY;
+        }
+        if (config.originX !== undefined)
+        {
+            cacheConfig.originX = entry.originX;
+            entry.originX = config.originX;
+        }
+        if (config.originY !== undefined)
+        {
+            cacheConfig.originY = entry.originY;
+            entry.originY = config.originY;
+        }
+        if (config.alpha !== undefined)
+        {
+            cacheConfig.alpha = entry.alpha;
+            entry.alpha = config.alpha;
+        }
+        if (config.tint !== undefined)
+        {
+            cacheConfig.tint = entry.tint;
+            entry.tint = config.tint;
+        }
+        if (config.blendMode !== undefined)
+        {
+            cacheConfig.blendMode = entry.blendMode;
+            entry.blendMode = config.blendMode;
+        }
+
+        return cacheConfig;
+    },
+
+    /**
+     * Restores the object properties that were overridden during the `capture` method.
+     * This method is called automatically during rendering.
+     * Do not call it directly.
+     *
+     * @method Phaser.Textures.DynamicTexture#finishCapture
+     * @since 4.0.0
+     *
+     * @param {Phaser.GameObjects.GameObject} entry - The GameObject to restore the properties on.
+     * @param {Phaser.Types.Textures.CaptureConfig} cacheConfig - The cached properties to restore.
+     */
+    finishCapture: function (entry, cacheConfig)
+    {
+        // Restore the object properties.
+        if (cacheConfig.x !== undefined)
+        {
+            entry.x = cacheConfig.x;
+        }
+        if (cacheConfig.y !== undefined)
+        {
+            entry.y = cacheConfig.y;
+        }
+        if (cacheConfig.rotation !== undefined)
+        {
+            entry.rotation = cacheConfig.rotation;
+        }
+        if (cacheConfig.scaleX !== undefined)
+        {
+            entry.scaleX = cacheConfig.scaleX;
+        }
+        if (cacheConfig.scaleY !== undefined)
+        {
+            entry.scaleY = cacheConfig.scaleY;
+        }
+        if (cacheConfig.originX !== undefined)
+        {
+            entry.originX = cacheConfig.originX;
+        }
+        if (cacheConfig.originY !== undefined)
+        {
+            entry.originY = cacheConfig.originY;
+        }
+        if (cacheConfig.alpha !== undefined)
+        {
+            entry.alpha = cacheConfig.alpha;
+        }
+        if (cacheConfig.tint !== undefined)
+        {
+            entry.tint = cacheConfig.tint;
+        }
+        if (cacheConfig.blendMode !== undefined)
+        {
+            entry.blendMode = cacheConfig.blendMode;
+        }
     },
 
     /**

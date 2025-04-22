@@ -1,12 +1,14 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
 var CameraEvents = require('../../../cameras/2d/events');
 var GetColor32 = require('../../../display/color/GetColor32');
+var TransformMatrix = require('../../../gameobjects/components/TransformMatrix.js');
 var Rectangle = require('../../../geom/rectangle/Rectangle');
+var Equal = require('../../../math/fuzzy/Equal.js');
 var Class = require('../../../utils/Class');
 var Utils = require('../Utils.js');
 var RenderNode = require('./RenderNode');
@@ -61,6 +63,17 @@ var Camera = new Class({
          * @since 4.0.0
          */
         this.listCompositorNode = manager.getNode('ListCompositor');
+
+        /**
+         * A temporary TransformMatrix used for the parent context
+         * within which this camera is renderered.
+         *
+         * @name Phaser.Renderer.WebGL.RenderNodes.Camera#_parentTransformMatrix
+         * @type {Phaser.GameObjects.Components.TransformMatrix}
+         * @private
+         * @since 4.0.0
+         */
+        this._parentTransformMatrix = new TransformMatrix();
     },
 
     /**
@@ -96,7 +109,25 @@ var Camera = new Class({
         var internalFilters = camera.filters.internal.getActive();
         var externalFilters = camera.filters.external.getActive();
 
-        var useFramebuffers = forceFramebuffer || internalFilters.length || externalFilters.length || alpha < 1;
+        var useFramebuffers = forceFramebuffer || camera.forceComposite || internalFilters.length || externalFilters.length || alpha < 1;
+
+        if (!parentTransformMatrix)
+        {
+            parentTransformMatrix = this._parentTransformMatrix.copyFrom(camera.matrixExternal);
+        }
+        else
+        {
+            camera.matrixExternal.multiply(parentTransformMatrix, parentTransformMatrix);
+        }
+
+        // Check whether the parentTransformMatrix is the identity matrix.
+        var decomposedParent = parentTransformMatrix.decomposeMatrix();
+        var parentIsIdentity =
+            Equal(decomposedParent.translateX, 0) &&
+            Equal(decomposedParent.translateY, 0) &&
+            Equal(decomposedParent.rotation, 0) &&
+            Equal(decomposedParent.scaleX, 1) &&
+            Equal(decomposedParent.scaleY, 1);
 
         var cx = camera.x;
         var cy = camera.y;
@@ -109,15 +140,17 @@ var Camera = new Class({
         
         if (useFramebuffers)
         {
-            baseContext.setScissorBox(0, 0, drawingContext.width, drawingContext.height);
             currentContext = drawingContextPool.get(cw, ch);
             currentContext.setCamera(camera);
+
+            // Set the scissor to the camera dimensions.
+            currentContext.setScissorBox(0, 0, cw, ch);
         }
         else
         {
             currentContext = baseContext;
+            currentContext.setScissorBox(cx, cy, cw, ch);
         }
-        currentContext.setScissorBox(cx, cy, cw, ch);
 
         // Enter drawing context.
         currentContext.use();
@@ -129,11 +162,11 @@ var Camera = new Class({
         {
             var bg = camera.backgroundColor;
             var col = GetColor32(bg.red, bg.green, bg.blue, bg.alpha);
-            fillCamera.run(currentContext, col);
+            fillCamera.run(currentContext, col, useFramebuffers);
         }
 
         // Draw children.
-        this.listCompositorNode.run(currentContext, children, useFramebuffers ? null : parentTransformMatrix, renderStep);
+        this.listCompositorNode.run(currentContext, children, null, renderStep);
 
         // Draw camera post effects.
 
@@ -141,14 +174,14 @@ var Camera = new Class({
         if (flashEffect.postRenderWebGL())
         {
             col = GetColor32(flashEffect.red, flashEffect.green, flashEffect.blue, flashEffect.alpha * 255);
-            fillCamera.run(currentContext, col);
+            fillCamera.run(currentContext, col, useFramebuffers);
         }
 
         var fadeEffect = camera.fadeEffect;
         if (fadeEffect.postRenderWebGL())
         {
             col = GetColor32(fadeEffect.red, fadeEffect.green, fadeEffect.blue, fadeEffect.alpha * 255);
-            fillCamera.run(currentContext, col);
+            fillCamera.run(currentContext, col, useFramebuffers);
         }
 
         // Finish rendering children.
@@ -217,7 +250,10 @@ var Camera = new Class({
                 }
 
                 // Will the texture need to be repositioned for the external filters?
-                copyInternal = coverageExternal.width !== currentContext.width || coverageExternal.height !== currentContext.height || parentTransformMatrix;
+                copyInternal =
+                    coverageExternal.width !== currentContext.width ||
+                    coverageExternal.height !== currentContext.height ||
+                    !parentIsIdentity;
 
                 if (copyInternal)
                 {
@@ -240,31 +276,14 @@ var Camera = new Class({
                 var externalX = coverageExternal.x;
                 var externalY = coverageExternal.y;
                 var quad;
-                if (parentTransformMatrix)
-                {
-                    // We're drawing a filtered object.
-                    parentTransformMatrix.setQuad(
-                        coverageInternal.x,
-                        coverageInternal.y,
-                        coverageInternal.x + coverageInternal.width,
-                        coverageInternal.y + coverageInternal.height
-                    );
-                    quad = parentTransformMatrix.quad;
-                }
-                else
-                {
-                    // We're drawing a camera.
-                    var offsetX = (currentContext.width - outputContext.width) / 2;
-                    var offsetY = (currentContext.height - outputContext.height) / 2;
-                    var w = currentContext.width - offsetX;
-                    var h = currentContext.height - offsetY;
-                    quad = [
-                        offsetX, offsetY,
-                        offsetX, h,
-                        w, h,
-                        w, offsetY
-                    ];
-                }
+
+                parentTransformMatrix.setQuad(
+                    coverageInternal.x,
+                    coverageInternal.y,
+                    coverageInternal.x + coverageInternal.width,
+                    coverageInternal.y + coverageInternal.height
+                );
+                quad = parentTransformMatrix.quad;
 
                 tint = drawExternalFilters ? 0xffffffff : getAlphaTint(alpha);
 
@@ -366,10 +385,10 @@ var Camera = new Class({
                         currentContext.texture,
 
                         // Transformed quad in order TL, BL, TR, BR:
-                        x1, y1,
                         x1, y2,
-                        x2, y1,
+                        x1, y1,
                         x2, y2,
+                        x2, y1,
 
                         // Texture coordinates in X, Y, Width, Height:
                         0, 0, 1, 1,

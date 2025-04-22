@@ -2,9 +2,11 @@
  * @author       Richard Davey <rich@phaser.io>
  * @author       Felipe Alfonso <@bitnenfer>
  * @author       Matthew Groves <@doormat>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
+
+var TransformMatrix = require('../../gameobjects/components/TransformMatrix');
 
 /**
  * @namespace Phaser.Renderer.WebGL.Utils
@@ -161,6 +163,13 @@ module.exports = {
         var camera = drawingContext.camera;
         var scene = camera.scene;
         var lightManager = scene.sys.lights;
+
+        if (!lightManager || !lightManager.active)
+        {
+            return;
+        }
+
+
         var lights = lightManager.getLights(camera);
         var lightsCount = lights.length;
         var ambientColor = lightManager.ambientColor;
@@ -195,6 +204,8 @@ module.exports = {
                 lightsCount
             );
 
+            var camMatrix = new TransformMatrix();
+
             for (var i = 0; i < lightsCount; i++)
             {
                 var light = lights[i].light;
@@ -202,9 +213,14 @@ module.exports = {
 
                 var lightName = 'uLights[' + i + '].';
 
-                camera.matrix.transformPoint(
-                    light.x - (camera.scrollX * light.scrollFactorX * camera.zoom),
-                    light.y - (camera.scrollY * light.scrollFactorY * camera.zoom),
+                camMatrix.copyWithScrollFactorFrom(
+                    camera.matrixCombined,
+                    camera.scrollX, camera.scrollY,
+                    light.scrollFactorX, light.scrollFactorY
+                );
+                camMatrix.transformPoint(
+                    light.x,
+                    light.y,
                     vec
                 );
 

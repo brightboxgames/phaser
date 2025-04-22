@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -13,6 +13,7 @@ var RenderNode = require('./RenderNode');
  * ready for another renderer.
  *
  * This is used by the Extern Game Object to prepare the WebGL context for custom rendering.
+ * It is the counterpart of RebindContext.
  *
  * @class YieldContext
  * @memberof Phaser.Renderer.WebGL.RenderNodes
@@ -57,9 +58,14 @@ var YieldContext = new Class({
     {
         this.onRunBegin(displayContext);
 
-        this.manager.startStandAloneRender();
+        var manager = this.manager;
+        var renderer = manager.renderer;
 
-        this.manager.renderer.glWrapper.update(this._state);
+        manager.startStandAloneRender();
+
+        renderer.glWrapper.update(this._state);
+
+        renderer.glTextureUnits.unbindAllUnits();
 
         this.onRunEnd(displayContext);
     }

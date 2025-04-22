@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -18,8 +18,12 @@ var CONST = require('../../const');
  * @param {Phaser.Renderer.WebGL.WebGLRenderer} renderer - A reference to the current active WebGL renderer.
  * @param {Phaser.GameObjects.Layer} layer - The Game Object being rendered in this call.
  * @param {Phaser.Renderer.WebGL.DrawingContext} drawingContext - The current drawing context.
+ * @param {Phaser.GameObjects.Components.TransformMatrix} parentMatrix - This transform matrix is defined if the game object is nested
+ * @param {number} renderStep - The index of this function in the Game Object's list of render processes. Used to support multiple rendering functions.
+ * * @param {Phaser.GameObjects.GameObject[]} displayList - The display list which is currently being rendered.
+ * @param {number} displayListIndex - The index of the Game Object within the display list.
  */
-var LayerWebGLRenderer = function (renderer, layer, drawingContext)
+var LayerWebGLRenderer = function (renderer, layer, drawingContext, parentMatrix, renderStep, displayList, displayListIndex)
 {
     var children = layer.list;
     var childCount = children.length;
@@ -92,7 +96,7 @@ var LayerWebGLRenderer = function (renderer, layer, drawingContext)
         child.setAlpha(childAlphaTopLeft * alpha, childAlphaTopRight * alpha, childAlphaBottomLeft * alpha, childAlphaBottomRight * alpha);
 
         //  Render
-        child.renderWebGLStep(renderer, child, currentContext);
+        child.renderWebGLStep(renderer, child, currentContext, undefined, undefined, children, i);
 
         //  Restore original values
         child.setAlpha(childAlphaTopLeft, childAlphaTopRight, childAlphaBottomLeft, childAlphaBottomRight);

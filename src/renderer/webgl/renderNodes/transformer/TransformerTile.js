@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -51,9 +51,17 @@ var TransformerTile = new Class({
         var calcMatrix = this._calcMatrix;
         var spriteMatrix = this._spriteMatrix;
 
-        // camMatrix will not be mutated when working with tiles,
-        // so we just take a reference.
-        var camMatrix = camera.matrix;
+        // Get view matrix.
+        calcMatrix.copyWithScrollFactorFrom(
+            camera.getViewMatrix(!drawingContext.useCanvas),
+            camera.scrollX, camera.scrollY,
+            gameObject.scrollFactorX, gameObject.scrollFactorY
+        );
+
+        if (parentMatrix)
+        {
+            calcMatrix.multiply(parentMatrix);
+        }
 
         var frameWidth = texturerNode.frameWidth;
         var frameHeight = texturerNode.frameHeight;
@@ -99,11 +107,9 @@ var TransformerTile = new Class({
             sx,
             sy
         );
-        spriteMatrix.e -= camera.scrollX * gameObject.scrollFactorX;
-        spriteMatrix.f -= camera.scrollY * gameObject.scrollFactorY;
 
-        // Multiply by the Sprite matrix, store result in calcMatrix
-        camMatrix.multiply(spriteMatrix, calcMatrix);
+        // Multiply by the Sprite matrix
+        calcMatrix.multiply(spriteMatrix);
 
         // Determine whether the matrix does not rotate, scale, or skew.
         var cmm = calcMatrix.matrix;

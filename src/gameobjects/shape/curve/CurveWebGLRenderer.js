@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -27,7 +27,7 @@ var CurveWebGLRenderer = function (renderer, src, drawingContext, parentMatrix)
     var camera = drawingContext.camera;
     camera.addToRenderList(src);
 
-    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix).calc;
+    var calcMatrix = GetCalcMatrix(src, camera, parentMatrix, !drawingContext.useCanvas).calc;
 
     // Note use of _curveBounds, unlike other path-based Shape objects.
     var dx = src._displayOriginX + src._curveBounds.x;

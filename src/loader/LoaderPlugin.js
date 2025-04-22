@@ -1,6 +1,6 @@
 /**
  * @author       Richard Davey <rich@phaser.io>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -1068,7 +1068,7 @@ var LoaderPlugin = new Class({
      *
      * If the process was successful, and the File isn't part of a MultiFile, its `addToCache` method is called.
      *
-     * It this then removed from the queue. If there are no more files to load `loadComplete` is called.
+     * It is then removed from the queue. If there are no more files to load `loadComplete` is called.
      *
      * @method Phaser.Loader.LoaderPlugin#fileProcessComplete
      * @since 3.7.0

@@ -1,6 +1,6 @@
 /**
  * @author       Benjamin D. Richards <benjamindrichards@gmail.com>
- * @copyright    2013-2024 Phaser Studio Inc.
+ * @copyright    2013-2025 Phaser Studio Inc.
  * @license      {@link https://opensource.org/licenses/MIT|MIT License}
  */
 
@@ -23,6 +23,12 @@ var RenderTextureRenderModes = require('./RenderTextureRenderModes');
  */
 var RenderTextureWebGLRenderer = function (renderer, src, drawingContext, parentMatrix)
 {
+    if (src.isCurrentlyRendering)
+    {
+        return;
+    }
+    src.isCurrentlyRendering = true;
+
     var redraw = true;
     var render = true;
     if (src.renderMode === RenderTextureRenderModes.REDRAW)
@@ -43,6 +49,8 @@ var RenderTextureWebGLRenderer = function (renderer, src, drawingContext, parent
     {
         ImageWebGLRenderer(renderer, src, drawingContext, parentMatrix);
     }
+
+    src.isCurrentlyRendering = false;
 };
 
 module.exports = RenderTextureWebGLRenderer;
