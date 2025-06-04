@@ -13,6 +13,7 @@ var BaseFilterShader = require('./filters/BaseFilterShader');
 
 var BatchHandlerPointLight = require('./BatchHandlerPointLight');
 var BatchHandlerQuad = require('./BatchHandlerQuad');
+var BatchHandlerQuadSingle = require('./BatchHandlerQuadSingle');
 var BatchHandlerStrip = require('./BatchHandlerStrip');
 var BatchHandlerTileSprite = require('./BatchHandlerTileSprite');
 var BatchHandlerTriFlat = require('./BatchHandlerTriFlat');
@@ -27,6 +28,7 @@ var FillTri = require('./FillTri');
 
 var FilterBarrel = require('./filters/FilterBarrel');
 var FilterBlend = require('./filters/FilterBlend');
+var FilterBlocky = require('./filters/FilterBlocky');
 var FilterBlur = require('./filters/FilterBlur');
 var FilterBlurHigh = require('./filters/FilterBlurHigh');
 var FilterBlurLow = require('./filters/FilterBlurLow');
@@ -145,6 +147,7 @@ var RenderNodeManager = new Class({
 
             BatchHandlerPointLight: BatchHandlerPointLight,
             BatchHandlerQuad: BatchHandlerQuad,
+            BatchHandlerQuadSingle: BatchHandlerQuadSingle,
             BatchHandlerStrip: BatchHandlerStrip,
             BatchHandlerTileSprite: BatchHandlerTileSprite,
             BatchHandlerTriFlat: BatchHandlerTriFlat,
@@ -159,6 +162,7 @@ var RenderNodeManager = new Class({
 
             FilterBarrel: FilterBarrel,
             FilterBlend: FilterBlend,
+            FilterBlocky: FilterBlocky,
             FilterBlur: FilterBlur,
             FilterBlurHigh: FilterBlurHigh,
             FilterBlurLow: FilterBlurLow,

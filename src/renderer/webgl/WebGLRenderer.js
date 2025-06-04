@@ -314,26 +314,6 @@ var WebGLRenderer = new Class({
         this.glVAOWrappers = [];
 
         /**
-         * A generic vertex buffer. This should be used by any process
-         * which doesn't need persistent vertex data.
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#genericVertexBuffer
-         * @type {Phaser.Renderer.WebGL.Wrappers.WebGLBufferWrapper}
-         * @since 4.0.0
-         */
-        this.genericVertexBuffer = null;
-
-        /**
-         * Data for a generic vertex buffer. This is used to update the
-         * `genericVertexBuffer`.
-         *
-         * @name Phaser.Renderer.WebGL.WebGLRenderer#genericVertexData
-         * @type {ArrayBuffer}
-         * @since 4.0.0
-         */
-        this.genericVertexData = null;
-
-        /**
          * A generic quad index buffer. This is a READ-ONLY buffer.
          * It describes the four corners of a quad,
          * a structure which is used in several places in the renderer.
@@ -833,22 +813,6 @@ var WebGLRenderer = new Class({
 
         this.isBooted = true;
 
-        // Provision the generic vertex buffer.
-        // The size is determined by the maximum number of vertices we want
-        // to handle.
-        // This is usually determined by the maximum amount of data we can index
-        // with a 16-bit unsigned integer.
-        // There are 65536 indices possible with 16 bits.
-        // We actually use a number of indices equal to the batch size
-        // multiplied by 4 (each batch item is a quad with 4 vertices),
-        // although this number is 65536 (16384 * 4) by default.
-        // Each index represents a vertex with 16 possible attributes.
-        // Each attribute has a maximum size of 4 floats.
-        // Each float is 4 bytes.
-        var genericVertexBytes = game.config.batchSize * 4 * 16 * 4 * 4;
-        this.genericVertexData = new ArrayBuffer(genericVertexBytes);
-        this.genericVertexBuffer = this.createVertexBuffer(this.genericVertexData, gl.DYNAMIC_DRAW);
-
         // Provision the generic quad index buffer.
         // Ensure that there is no VAO bound, because the following index buffer
         // will modify any currently bound VAO.
@@ -931,6 +895,46 @@ var WebGLRenderer = new Class({
             var stdDerivativesString = 'OES_standard_derivatives';
 
             this.standardDerivativesExtension = (exts.indexOf(stdDerivativesString) > -1) ? gl.getExtension(stdDerivativesString) : null;
+        }
+
+        // Make WebGL2 core features which were extensions available on the WebGL1 context.
+        // This allows us to use a WebGL2 context.
+        if (gl instanceof WebGLRenderingContext)
+        {
+            // Incorporate instanced arrays.
+            if (this.instancedArraysExtension)
+            {
+                gl.vertexAttribDivisor = this.instancedArraysExtension.vertexAttribDivisorANGLE.bind(this.instancedArraysExtension);
+                gl.drawArraysInstanced = this.instancedArraysExtension.drawArraysInstancedANGLE.bind(this.instancedArraysExtension);
+                gl.drawElementsInstanced = this.instancedArraysExtension.drawElementsInstancedANGLE.bind(this.instancedArraysExtension);
+            }
+            else
+            {
+                throw new Error('ANGLE_instanced_arrays extension not supported. Required for rendering.');
+            }
+
+            // Incorporate vertex array objects.
+            if (this.vaoExtension)
+            {
+                gl.createVertexArray = this.vaoExtension.createVertexArrayOES.bind(this.vaoExtension);
+                gl.bindVertexArray = this.vaoExtension.bindVertexArrayOES.bind(this.vaoExtension);
+                gl.deleteVertexArray = this.vaoExtension.deleteVertexArrayOES.bind(this.vaoExtension);
+                gl.isVertexArray = this.vaoExtension.isVertexArrayOES.bind(this.vaoExtension);
+            }
+            else
+            {
+                throw new Error('OES_vertex_array_object extension not supported. Required for rendering.');
+            }
+
+            // Incorporate standard derivatives.
+            if (this.standardDerivativesExtension)
+            {
+                gl.FRAGMENT_SHADER_DERIVATIVE_HINT = this.standardDerivativesExtension.FRAGMENT_SHADER_DERIVATIVE_HINT_OES;
+            }
+            else if (game.config.smoothPixelArt)
+            {
+                throw new Error('OES_standard_derivatives extension not supported. Cannot use smoothPixelArt.');
+            }
         }
     },
 
@@ -2110,7 +2114,7 @@ var WebGLRenderer = new Class({
 
         this.glTextureUnits.bindUnits(textures);
 
-        this.instancedArraysExtension.drawArraysInstancedANGLE(topology || gl.TRIANGLE_STRIP, first, count, instanceCount);
+        gl.drawArraysInstanced(topology || gl.TRIANGLE_STRIP, first, count, instanceCount);
     },
 
     /**

@@ -167,7 +167,6 @@ var BatchHandlerTriFlat = new Class({
             // Lighting uniforms.
             Utils.updateLightingUniforms(
                 this.renderOptions.lighting,
-                this.manager.renderer,
                 drawingContext,
                 programManager,
                 1,
@@ -259,9 +258,8 @@ var BatchHandlerTriFlat = new Class({
             var stride = this.vertexBufferLayout.layout.stride;
 
             // Update vertex buffers.
-            // Because we are probably using a generic vertex buffer
-            // which is larger than the current batch, we need to update
-            // the buffer with the correct size.
+            // Because we frequently aren't filling the entire buffer,
+            // we need to update the buffer with the correct size.
             vertexBuffer.update(this.vertexCount * stride);
 
             // Update index buffer.

@@ -38,11 +38,11 @@ var Camera = new Class({
          * This is used when a camera is rendering to a framebuffer,
          * and the framebuffer needs to be drawn to the parent context.
          *
-         * @name Phaser.Renderer.WebGL.RenderNodes.Camera#batchHandlerQuadNode
+         * @name Phaser.Renderer.WebGL.RenderNodes.Camera#batchHandlerQuadSingleNode
          * @type {Phaser.Renderer.WebGL.RenderNodes.BatchHandlerQuad}
          * @since 4.0.0
          */
-        this.batchHandlerQuadNode = manager.getNode('BatchHandlerQuad');
+        this.batchHandlerQuadSingleNode = manager.getNode('BatchHandlerQuadSingle');
 
         /**
          * The RenderNode that handles filling the camera with a
@@ -193,15 +193,9 @@ var Camera = new Class({
         {
             var index, filter, padding, renderNode, tint;
 
-            // Determine whether to use round vertex coordinates.
-            // Keyword: #OnlyTranslate
-            var cmm = camera.matrix.matrix;
-            var roundPixels = camera.roundPixels && (cmm[0] === 1 && cmm[1] === 0 && cmm[2] === 0 && cmm[3] === 1);
-
             // Set up render options.
             var renderOptions = {
-                smoothPixelArt: manager.renderer.game.config.smoothPixelArt,
-                roundPixels: roundPixels
+                smoothPixelArt: manager.renderer.game.config.smoothPixelArt
             };
 
             // Draw internal filters.
@@ -287,7 +281,7 @@ var Camera = new Class({
 
                 tint = drawExternalFilters ? 0xffffffff : getAlphaTint(alpha);
 
-                this.batchHandlerQuadNode.batch(
+                this.batchHandlerQuadSingleNode.batch(
                     currentContext,
 
                     // Texture.
@@ -378,7 +372,7 @@ var Camera = new Class({
                     var x2 = currentContext.width + padding.right;
                     var y2 = currentContext.height + padding.bottom;
 
-                    this.batchHandlerQuadNode.batch(
+                    this.batchHandlerQuadSingleNode.batch(
                         baseContext,
 
                         // Texture.

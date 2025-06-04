@@ -56,8 +56,7 @@ var BatchHandlerQuad = new Class({
             selfShadow: false,
             selfShadowPenumbra: 0,
             selfShadowThreshold: 0,
-            smoothPixelArt: false,
-            roundPixels: false
+            smoothPixelArt: false
         };
 
         BatchHandler.call(this, manager, this.defaultConfig, config);
@@ -267,11 +266,6 @@ var BatchHandlerQuad = new Class({
 
         // Standard uniforms.
         programManager.setUniform(
-            'uRoundPixels',
-            renderOptions.roundPixels
-        );
-
-        programManager.setUniform(
             'uResolution',
             [ drawingContext.width, drawingContext.height ]
         );
@@ -287,7 +281,6 @@ var BatchHandlerQuad = new Class({
             // Lighting uniforms.
             Utils.updateLightingUniforms(
                 renderOptions.lighting,
-                this.manager.renderer,
                 drawingContext,
                 programManager,
                 1,
@@ -335,6 +328,48 @@ var BatchHandlerQuad = new Class({
             );
         }
 
+    },
+
+    /**
+     * Finalize the texture count for the current sub-batch.
+     * This is called automatically when the render is run.
+     * It requests a shader program with the necessary number of textures,
+     * if that is less than the maximum allowed.
+     * This reduces the number of textures the GPU must handle,
+     * which can improve performance.
+     *
+     * @method Phaser.Renderer.WebGL.RenderNodes.BatchHandlerQuad#finalizeTextureCount
+     * @param {number} count - The total number of textures in the batch.
+     */
+    finalizeTextureCount: function (count)
+    {
+        var programManager = this.programManager;
+
+        if (this.renderOptions.lighting)
+        {
+            // The normal map is included in the textures array,
+            // but it's attached to another texture unit,
+            // so we shouldn't count it.
+            count = 1;
+        }
+
+        var textureAddition = programManager.getAdditionsByTag('TEXTURE')[0];
+        if (textureAddition)
+        {
+            programManager.replaceAddition(
+                textureAddition.name,
+                MakeGetTexture(count)
+            );
+        }
+
+        var texCountAddition = programManager.getAdditionsByTag('TexCount')[0];
+        if (texCountAddition)
+        {
+            programManager.replaceAddition(
+                texCountAddition.name,
+                MakeDefineTexCount(count)
+            );
+        }
     },
 
     /**
@@ -393,13 +428,6 @@ var BatchHandlerQuad = new Class({
             changed = true;
         }
 
-        var roundPixels = !!renderOptions.roundPixels;
-        if (roundPixels !== oldRenderOptions.roundPixels)
-        {
-            newRenderOptions.roundPixels = roundPixels;
-            changed = true;
-        }
-
         this._renderOptionsChanged = changed;
     },
 
@@ -428,6 +456,15 @@ var BatchHandlerQuad = new Class({
                 programManager.replaceAddition(
                     texCountAddition.name,
                     MakeDefineTexCount(multiTexturing ? this.maxTexturesPerBatch : 1)
+                );
+            }
+
+            var textureAddition = programManager.getAdditionsByTag('TEXTURE')[0];
+            if (textureAddition)
+            {
+                programManager.replaceAddition(
+                    textureAddition.name,
+                    MakeGetTexture(multiTexturing ? this.maxTexturesPerBatch : 1)
                 );
             }
         }
@@ -495,14 +532,6 @@ var BatchHandlerQuad = new Class({
                 texResAddition.disable = !texRes;
             }
         }
-
-        if (oldRenderOptions.roundPixels !== newRenderOptions.roundPixels)
-        {
-            var roundPixels = newRenderOptions.roundPixels;
-            oldRenderOptions.roundPixels = roundPixels;
-
-            // Do not update the shader; this will be set as a uniform.
-        }
     },
 
     /**
@@ -525,31 +554,33 @@ var BatchHandlerQuad = new Class({
         this.pushCurrentBatchEntry();
 
         var programManager = this.programManager;
-        var programSuite = programManager.getCurrentProgramSuite();
 
-        if (programSuite)
+        var bytesPerIndexPerInstance = this.bytesPerIndexPerInstance;
+        var indicesPerInstance = this.indicesPerInstance;
+        var renderer = this.manager.renderer;
+        var vertexBuffer = this.vertexBufferLayout.buffer;
+
+        // Update vertex buffers.
+        // Because we frequently aren't filling the entire buffer,
+        // we need to update the buffer with the correct size.
+        vertexBuffer.update(this.instanceCount * this.bytesPerInstance);
+
+        var subBatches = this.batchEntries.length;
+        for (var i = 0; i < subBatches; i++)
         {
-            var program = programSuite.program;
-            var vao = programSuite.vao;
+            var entry = this.batchEntries[i];
 
-            this.setupUniforms(drawingContext);
-            programManager.applyUniforms(program);
+            this.finalizeTextureCount(entry.unit);
 
-            var bytesPerIndexPerInstance = this.bytesPerIndexPerInstance;
-            var indicesPerInstance = this.indicesPerInstance;
-            var renderer = this.manager.renderer;
-            var vertexBuffer = this.vertexBufferLayout.buffer;
+            var programSuite = programManager.getCurrentProgramSuite();
 
-            // Update vertex buffers.
-            // Because we are probably using a generic vertex buffer
-            // which is larger than the current batch, we need to update
-            // the buffer with the correct size.
-            vertexBuffer.update(this.instanceCount * this.bytesPerInstance);
-
-            var subBatches = this.batchEntries.length;
-            for (var i = 0; i < subBatches; i++)
+            if (programSuite)
             {
-                var entry = this.batchEntries[i];
+                var program = programSuite.program;
+                var vao = programSuite.vao;
+
+                this.setupUniforms(drawingContext);
+                programManager.applyUniforms(program);
 
                 if (this.renderOptions.texRes)
                 {

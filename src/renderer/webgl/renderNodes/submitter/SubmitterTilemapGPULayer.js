@@ -80,7 +80,7 @@ var SubmitterTilemapGPULayer = new Class({
         this.vertexBufferLayout = new WebGLVertexBufferLayoutWrapper(
             renderer,
             finalConfig.vertexBufferLayout,
-            finalConfig.createOwnVertexBuffer ? null : renderer.genericVertexBuffer
+            null
         );
 
         /**
@@ -211,6 +211,7 @@ var SubmitterTilemapGPULayer = new Class({
         var layoutSource = config.vertexBufferLayout;
         config.vertexBufferLayout = {};
         config.vertexBufferLayout.usage = layoutSource.usage;
+        config.vertexBufferLayout.count = layoutSource.count || 4;
         config.vertexBufferLayout.layout = [];
         var remove = config.vertexBufferLayoutRemove || [];
 
@@ -255,15 +256,9 @@ var SubmitterTilemapGPULayer = new Class({
      */
     setupUniforms: function (drawingContext, tilemapLayer)
     {
-        var camera = drawingContext.camera;
         var programManager = this.programManager;
 
         // Standard uniforms.
-
-        programManager.setUniform(
-            'uRoundPixels',
-            camera.roundPixels
-        );
 
         programManager.setUniform(
             'uResolution',
@@ -330,7 +325,6 @@ var SubmitterTilemapGPULayer = new Class({
         // Lighting uniforms.
         Utils.updateLightingUniforms(
             tilemapLayer.lighting,
-            this.manager.renderer,
             drawingContext,
             programManager,
             3,
@@ -519,9 +513,8 @@ var SubmitterTilemapGPULayer = new Class({
         vertexF32[offset32++] = 1;
 
         // Update vertex buffer.
-        // Because we are probably using a generic vertex buffer
-        // which is larger than the current batch, we need to update
-        // the buffer with the correct size.
+        // Because we frequently aren't filling the entire buffer,
+        // we need to update the buffer with the correct size.
         vertexBuffer.update(stride * 4);
 
         // Assemble textures.
