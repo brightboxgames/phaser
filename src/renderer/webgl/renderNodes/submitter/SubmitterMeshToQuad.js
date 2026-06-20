@@ -35,7 +35,7 @@ var getTint = Utils.getTintAppendFloatAlpha;
  * @class SubmitterMeshToQuad
  * @memberof Phaser.Renderer.WebGL.RenderNodes
  * @constructor
- * @since 4.NEXT
+ * @since 4.2.0
  * @extends Phaser.Renderer.WebGL.RenderNodes.SubmitterQuad
  * @param {Phaser.Renderer.WebGL.RenderNodes.RenderNodeManager} manager - The manager that owns this RenderNode.
  * @param {Phaser.Types.Renderer.WebGL.RenderNodes.SubmitterQuadConfig} [config] - The configuration object for this RenderNode.
@@ -54,10 +54,10 @@ var SubmitterMeshToQuad = new Class({
          *
          * @name Phaser.Renderer.WebGL.RenderNodes.SubmitterMeshToQuad#_tempPoint
          * @type {Phaser.Math.Vector2}
-         * @since 4.NEXT
+         * @since 4.2.0
          * @private
          */
-        _tempPoint = new Vector2();
+        this._tempPoint = new Vector2();
     },
 
     /**
@@ -74,21 +74,23 @@ var SubmitterMeshToQuad = new Class({
 
     /**
      * Processes the given GameObject and submits mesh vertex data to the appropriate
-     * batch handler for rendering. This method iterates over the mesh indices and
-     * vertices, checking for shared edges between triangles to combine them into quads.
-     * If no shared edge is found, the triangle is submitted as a degenerate. The
-     * method then caches the last triangle and continues iterating until all triangles
-     * are processed. If a cached triangle remains at the end, it is submitted as a
-     * degenerate.
+     * batch handler for rendering.
+     *
+     * If the mesh has a prebuilt ordered index list (`Mesh2D#useOrderedIndices` is `true`), it is used directly.
+     *
+     * Otherwise, the method submits each triangle as a quad,
+     * synthesizing a degenerate triangle for the other half of the quad.
+     * This is inefficient and should be avoided,
+     * either by using the ordered index list, or by using the `BatchHandlerTri` render node.
      *
      * The method also sets the render options for the GameObject, including the normal
      * map texture and rotation.
      *
      * @method Phaser.Renderer.WebGL.RenderNodes.SubmitterMeshToQuad#run
-     * @since 4.NEXT
+     * @since 4.2.0
      * @param {Phaser.Renderer.WebGL.DrawingContext} drawingContext - The current drawing context.
      * @param {Phaser.GameObjects.GameObject} gameObject - The GameObject being rendered.
-     * @param {Phaser.GameObjects.Components.TransformMatrix} [parentMatrix] - The parent matrix of the GameObject, if it is a nested game object.
+     * @param {Phaser.GameObjects.Components.TransformMatrix} parentMatrix - The parent matrix of the GameObject, if it is a nested game object.
      * @param {Phaser.Renderer.WebGL.RenderNodes.TransformerVertex} transformerNode - The transformer node used to transform the GameObject.
      * @param {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} [normalMap] - The normal map texture to use for lighting. If omitted, the normal map texture of the GameObject will be used, or the default normal map texture of the renderer.
      * @param {number} [normalMapRotation] - The rotation of the normal map texture. If omitted, the rotation of the GameObject will be used.
@@ -104,162 +106,53 @@ var SubmitterMeshToQuad = new Class({
     {
         this.onRunBegin(drawingContext);
 
-        var cached = false;
-        var triCount = gameObject.indices.length / 4;
+        // Build the transform matrix once for the whole mesh, so that
+        // `_submitQuad` can transform each vertex cheaply.
+        transformerNode.setupMatrix(drawingContext, gameObject, parentMatrix);
 
-        // First triangle vertex cache.
-        var d, e, f, firstTexturePage;
+        var step = 4;
 
-        for (var i = 0; i < triCount; i++)
+        // If the game object has a prebuilt ordered index list, consume it
+        // directly. It is arranged into quad-forming pairs of triangles, so we
+        // can submit quads without searching for shared edges.
+        if (gameObject.useOrderedIndices && gameObject.indicesOrdered)
         {
-            var index = i * 4;
-            var a = gameObject.indices[index];
-            var b = gameObject.indices[index + 1];
-            var c = gameObject.indices[index + 2];
-            var texturePage = gameObject.indices[index + 3];
+            var ordered = gameObject.indicesOrdered;
 
-            // We could check for degenerate triangles,
-            // using either abc or the texture coordinates,
-            // but as we expect raw triangles, and there's no reason to define
-            // degenerate triangles except for purposeful topology, we don't.
-
-            if (!cached)
+            // Each quad is a pair of triangles (8 values):
+            // p, q, r, page (first triangle) and q, r, s, page (second).
+            for (var o = 0; o < ordered.length; o += step * 2)
             {
-                cached = true;
-
-                d = a;
-                e = b;
-                f = c;
-                firstTexturePage = texturePage;
-
-                continue;
+                this._submitQuad(
+                    ordered[o],
+                    ordered[o + 1],
+                    ordered[o + 2],
+                    ordered[o + 6],
+                    ordered[o + 3],
+                    drawingContext, gameObject, parentMatrix, transformerNode, normalMap, normalMapRotation
+                );
             }
 
-            // Compare with potential first half of quad.
-            // If the texture page is the same,
-            // and the triangles share any edge (as defined by abc and def),
-            // then we can submit a quad combining the triangles.
-            if (texturePage === firstTexturePage)
-            {
-                var sharedEdge = false;
+            this.onRunEnd(drawingContext);
 
-                // Whether vertices are the same.
-                var isAD = a === d;
-                var isAE = a === e;
-                var isAF = a === f;
-                var isBD = b === d;
-                var isBE = b === e;
-                var isBF = b === f;
-                var isCD = c === d;
-                var isCE = c === e;
-                var isCF = c === f;
-
-                // Shared quad.
-                var p, q, r, s;
-
-                // Possible combinations of shared edges.
-                if ((isAD && isBE) || (isAE && isBD))
-                {
-                    sharedEdge = true;
-                    p = c;
-                    q = a;
-                    r = b;
-                    s = f;
-                }
-                else if ((isAD && isBF) || (isAF && isBD))
-                {
-                    sharedEdge = true;
-                    p = c;
-                    q = a;
-                    r = b;
-                    s = e;
-                }
-                else if ((isAE && isBF) || (isAF && isBE))
-                {
-                    sharedEdge = true;
-                    p = c;
-                    q = a;
-                    r = b;
-                    s = d;
-                }
-                else if ((isAD && isCE) || (isAE && isCD))
-                {
-                    sharedEdge = true;
-                    p = b;
-                    q = a;
-                    r = c;
-                    s = f;
-                }
-                else if ((isAD && isCF) || (isAF && isCD))
-                {
-                    sharedEdge = true;
-                    p = b;
-                    q = a;
-                    r = c;
-                    s = e;
-                }
-                else if ((isAE && isCF) || (isAF && isCE))
-                {
-                    sharedEdge = true;
-                    p = b;
-                    q = a;
-                    r = c;
-                    s = d;
-                }
-                else if ((isBD && isCE) || (isBE && isCD))
-                {
-                    sharedEdge = true;
-                    p = a;
-                    q = b;
-                    r = c;
-                    s = f;
-                }
-                else if ((isBD && isCF) || (isBF && isCD))
-                {
-                    sharedEdge = true;
-                    p = a;
-                    q = b;
-                    r = c;
-                    s = e;
-                }
-                else if ((isBE && isCF) || (isBF && isCE))
-                {
-                    sharedEdge = true;
-                    p = a;
-                    q = b;
-                    r = c;
-                    s = d;
-                }
-
-                if (sharedEdge)
-                {
-                    this._submitQuad(p, q, r, s, texturePage, drawingContext, gameObject, parentMatrix, transformerNode, normalMap, normalMapRotation);
-
-                    cached = false;
-
-                    continue;
-                }
-            }
-
-            // The cached triangle cannot be linked with the current tri,
-            // so we submit it as a degenerate.
-            this._submitQuad(d, e, f, f, firstTexturePage, drawingContext, gameObject, parentMatrix, transformerNode, normalMap, normalMapRotation);
-
-            // Update the cached triangle.
-            d = a;
-            e = b;
-            f = c;
-            firstTexturePage = texturePage;
-            cached = true;
+            return;
         }
 
-        if (cached)
+        // If the mesh does not have a prebuilt ordered index list,
+        // submit each triangle as a quad,
+        // synthesizing a degenerate triangle for the other half of the quad.
+        var indices = gameObject.indices;
+        for (var i = 0; i < indices.length; i += step)
         {
-            // We have a cached triangle, but it's not part of a quad.
-            // Submit it as a degenerate.
-            this._submitQuad(d, e, f, f, firstTexturePage, drawingContext, gameObject, parentMatrix, transformerNode, normalMap, normalMapRotation);
+            this._submitQuad(
+                indices[i],
+                indices[i + 1],
+                indices[i + 2],
+                indices[i + 2],
+                indices[i + 3],
+                drawingContext, gameObject, parentMatrix, transformerNode, normalMap, normalMapRotation
+            );
         }
-
         this.onRunEnd(drawingContext);
     },
 
@@ -270,7 +163,7 @@ var SubmitterMeshToQuad = new Class({
      * or a single triangle using a degenerate triangle to pad quad alignment.
      *
      * @method Phaser.Renderer.WebGL.RenderNodes.SubmitterMeshToQuad#_submitQuad
-     * @since 4.NEXT
+     * @since 4.2.0
      * @param {number} a - The index of the first vertex of the quad. This is the corner unique to the first triangle.
      * @param {number} b - The index of the second vertex of the quad. This is shared between triangles.
      * @param {number} c - The index of the third vertex of the quad. This is shared between triangles.
@@ -278,7 +171,7 @@ var SubmitterMeshToQuad = new Class({
      * @param {number} texturePage - The index of the texture source to use for the quad.
      * @param {Phaser.Renderer.WebGL.DrawingContext} drawingContext - The current drawing context.
      * @param {Phaser.GameObjects.GameObject} gameObject - The GameObject being rendered.
-     * @param {Phaser.GameObjects.Components.TransformMatrix} [parentMatrix] - The parent matrix of the GameObject, if it is a nested game object.
+     * @param {Phaser.GameObjects.Components.TransformMatrix} parentMatrix - The parent matrix of the GameObject, if it is a nested game object.
      * @param {Phaser.Renderer.WebGL.RenderNodes.TransformerVertex} transformerNode - The transformer node used to transform the GameObject.
      * @param {Phaser.Renderer.WebGL.Wrappers.WebGLTextureWrapper} [normalMap] - The normal map texture to use for lighting. If omitted, the normal map texture of the GameObject will be used, or the default normal map texture of the renderer.
      * @param {number} [normalMapRotation] - The rotation of the normal map texture. If omitted, the rotation of the GameObject will be used.
@@ -327,23 +220,26 @@ var SubmitterMeshToQuad = new Class({
         var tintEffect = gameObject.tintMode;
         var tint = getTint(gameObject.tint, gameObject.alpha);
         var tint2 = gameObject.tint2;
+        var tempPoint = this._tempPoint;
 
-        _tempPoint.set(xA, yA);
-        transformerNode.run(drawingContext, gameObject, parentMatrix, _tempPoint);
-        xA = _tempPoint.x;
-        yA = _tempPoint.y;
-        _tempPoint.set(xB, yB);
-        transformerNode.run(drawingContext, gameObject, parentMatrix, _tempPoint);
-        xB = _tempPoint.x;
-        yB = _tempPoint.y;
-        _tempPoint.set(xC, yC);
-        transformerNode.run(drawingContext, gameObject, parentMatrix, _tempPoint);
-        xC = _tempPoint.x;
-        yC = _tempPoint.y;
-        _tempPoint.set(xD, yD);
-        transformerNode.run(drawingContext, gameObject, parentMatrix, _tempPoint);
-        xD = _tempPoint.x;
-        yD = _tempPoint.y;
+        // The transform matrix is built once per mesh by `run`, via
+        // `transformerNode.setupMatrix`, so we only project each vertex here.
+        tempPoint.set(xA, yA);
+        transformerNode.transformVertex(tempPoint);
+        xA = tempPoint.x;
+        yA = tempPoint.y;
+        tempPoint.set(xB, yB);
+        transformerNode.transformVertex(tempPoint);
+        xB = tempPoint.x;
+        yB = tempPoint.y;
+        tempPoint.set(xC, yC);
+        transformerNode.transformVertex(tempPoint);
+        xC = tempPoint.x;
+        yC = tempPoint.y;
+        tempPoint.set(xD, yD);
+        transformerNode.transformVertex(tempPoint);
+        xD = tempPoint.x;
+        yD = tempPoint.y;
 
         this.setRenderOptions(gameObject, normalMap, normalMapRotation);
 

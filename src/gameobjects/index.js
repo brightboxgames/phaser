@@ -130,6 +130,7 @@ var GameObjects = {
 if (typeof WEBGL_RENDERER)
 {
     GameObjects.CaptureFrame = require('./captureframe/CaptureFrame');
+    GameObjects.CustomContext = require('./customcontext/CustomContext');
     GameObjects.Gradient = require('./gradient/Gradient');
     GameObjects.Mesh2D = require('./mesh2d/Mesh2D');
     GameObjects.Noise = require('./noise/Noise');
@@ -142,8 +143,11 @@ if (typeof WEBGL_RENDERER)
     GameObjects.NineSlice = require('./nineslice/NineSlice');
     GameObjects.PointLight = require('./pointlight/PointLight');
     GameObjects.SpriteGPULayer = require('./spritegpulayer/SpriteGPULayer');
+    GameObjects.Stencil = require('./stencil/Stencil');
+    GameObjects.StencilReference = require('./stencilreference/StencilReference');
 
     GameObjects.Factories.CaptureFrame = require('./captureframe/CaptureFrameFactory');
+    GameObjects.Factories.CustomContext = require('./customcontext/CustomContextFactory');
     GameObjects.Factories.Gradient = require('./gradient/GradientFactory');
     GameObjects.Factories.Mesh2D = require('./mesh2d/Mesh2DFactory');
     GameObjects.Factories.Noise = require('./noise/NoiseFactory');
@@ -156,8 +160,11 @@ if (typeof WEBGL_RENDERER)
     GameObjects.Factories.NineSlice = require('./nineslice/NineSliceFactory');
     GameObjects.Factories.PointLight = require('./pointlight/PointLightFactory');
     GameObjects.Factories.SpriteGPULayer = require('./spritegpulayer/SpriteGPULayerFactory');
+    GameObjects.Factories.Stencil = require('./stencil/StencilFactory');
+    GameObjects.Factories.StencilReference = require('./stencilreference/StencilReferenceFactory');
 
     GameObjects.Creators.CaptureFrame = require('./captureframe/CaptureFrameCreator');
+    GameObjects.Creators.CustomContext = require('./customcontext/CustomContextCreator');
     GameObjects.Creators.Gradient = require('./gradient/GradientCreator');
     GameObjects.Creators.Mesh2D = require('./mesh2d/Mesh2DCreator');
     GameObjects.Creators.Noise = require('./noise/NoiseCreator');
@@ -170,6 +177,8 @@ if (typeof WEBGL_RENDERER)
     GameObjects.Creators.NineSlice = require('./nineslice/NineSliceCreator');
     GameObjects.Creators.PointLight = require('./pointlight/PointLightCreator');
     GameObjects.Creators.SpriteGPULayer = require('./spritegpulayer/SpriteGPULayerCreator');
+    GameObjects.Creators.Stencil = require('./stencil/StencilCreator');
+    GameObjects.Creators.StencilReference = require('./stencilreference/StencilReferenceCreator');
 
     GameObjects.Light = require('./lights/Light');
     GameObjects.LightsManager = require('./lights/LightsManager');

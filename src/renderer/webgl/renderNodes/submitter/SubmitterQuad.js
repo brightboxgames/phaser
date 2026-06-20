@@ -51,6 +51,7 @@ var SubmitterQuad = new Class({
 
         /**
          * Persistent object reused to pass render options to the batch handler.
+         * Alpha strategy will be set by the drawing context.
          *
          * @name Phaser.Renderer.WebGL.RenderNodes.SubmitterQuad#_renderOptions
          * @type {Phaser.Types.Renderer.WebGL.RenderNodes.BatchHandlerQuadRenderOptions}
